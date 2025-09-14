@@ -394,6 +394,20 @@ python train_yolov12_dino.py --help
 python test_yolov12l_dual.py
 ```
 
+### 🚀 **RTX 5090 Users - Important Note**
+
+If you have an **RTX 5090** GPU, you may encounter CUDA compatibility issues. See **[RTX 5090 Compatibility Guide](RTX_5090_COMPATIBILITY.md)** for solutions.
+
+**Quick Fix for RTX 5090:**
+```bash
+# Install PyTorch nightly with RTX 5090 support
+pip uninstall torch torchvision -y
+pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu121
+
+# Verify RTX 5090 compatibility
+python -c "import torch; print(f'✅ GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"No CUDA\"}')"
+```
+
 ## Validation
 [`yolov12n`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12n.pt)
 [`yolov12s`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12s.pt)

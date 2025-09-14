@@ -1,7 +1,7 @@
 # Core PyTorch and Vision
-torch==2.2.2 
-torchvision==0.17.2
-numpy==1.26.4
+torch
+torchvision
+numpy
 
 # DINOv3 and Vision Transformers
 transformers>=4.30.0
@@ -19,9 +19,8 @@ supervision==0.22.0
 # Model Export and Optimization
 onnx
 onnxruntime
-onnxslim==0.1.31
-onnxruntime-gpu==1.18.0
-
+onnxslim
+onnxruntime-gpu
 # Configuration and Utilities
 PyYAML==6.0.1
 scipy==1.13.0
