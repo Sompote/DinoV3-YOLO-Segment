@@ -152,8 +152,8 @@ def parse_arguments():
                        help='Experiment name')
     
     # Advanced training parameters
-    parser.add_argument('--freeze-dino', action='store_true',
-                       help='Freeze DINO backbone weights during training (default: False - DINO weights are trainable)')
+    parser.add_argument('--unfreeze-dino', action='store_true',
+                       help='Make DINO backbone weights trainable during training (default: False - DINO weights are frozen)')
     parser.add_argument('--lr', type=float, default=0.01,
                        help='Initial learning rate')
     parser.add_argument('--weight-decay', type=float, default=0.0005,
@@ -257,7 +257,7 @@ def setup_training_parameters(args):
     
     return args
 
-def modify_yaml_config_for_custom_dino(config_path, dino_input, yolo_size='s', freeze_dino=False):
+def modify_yaml_config_for_custom_dino(config_path, dino_input, yolo_size='s', unfreeze_dino=False):
     """
     Modify YAML config to replace DINO_MODEL_NAME or CUSTOM_DINO_INPUT placeholder with actual DINO input
     and scale DINO output channels based on YOLO model size.
@@ -266,7 +266,7 @@ def modify_yaml_config_for_custom_dino(config_path, dino_input, yolo_size='s', f
         config_path (str): Path to the YAML config file
         dino_input (str): Actual DINO input to replace the placeholder
         yolo_size (str): YOLO model size (n, s, m, l, x)
-        freeze_dino (bool): Whether to freeze DINO weights during training
+        unfreeze_dino (bool): Whether to make DINO weights trainable during training
     
     Returns:
         str: Path to the modified YAML config file
@@ -288,12 +288,12 @@ def modify_yaml_config_for_custom_dino(config_path, dino_input, yolo_size='s', f
                 if len(layer) >= 4 and isinstance(layer[3], list) and len(layer[3]) > 0:
                     if layer[3][0] == 'DINO_MODEL_NAME':
                         config['backbone'][i][3][0] = dino_input
-                        # Set freeze_backbone parameter
-                        config['backbone'][i][3][1] = freeze_dino
+                        # Set freeze_backbone parameter (inverted logic: unfreeze_dino=True means freeze_backbone=False)
+                        config['backbone'][i][3][1] = not unfreeze_dino
                         # Preprocessing always outputs 3 channels (enhanced RGB)
                         config['backbone'][i][3][2] = 3
                         print(f"   ✅ Replaced DINO_MODEL_NAME with {dino_input}")
-                        print(f"   🔧 DINO freeze weights: {freeze_dino}")
+                        print(f"   🔧 DINO weights {'trainable' if unfreeze_dino else 'frozen'}: freeze_backbone={not unfreeze_dino}")
                         print(f"   🔧 DINO3Preprocessor outputs: 3 channels (enhanced RGB)")
                         break  # Only replace first occurrence
     
@@ -318,9 +318,13 @@ def modify_yaml_config_for_custom_dino(config_path, dino_input, yolo_size='s', f
                 if len(layer) >= 4 and isinstance(layer[3], list) and len(layer[3]) > 0:
                     if layer[3][0] == 'CUSTOM_DINO_INPUT':
                         config['backbone'][i][3][0] = dino_input
+                        # Set freeze_backbone parameter (inverted logic: unfreeze_dino=True means freeze_backbone=False)
+                        if len(layer[3]) > 1:
+                            config['backbone'][i][3][1] = not unfreeze_dino
                         # Set DINO output channels to match the actual scale
                         config['backbone'][i][3][2] = dino_channels
                         print(f"   ✅ Replaced CUSTOM_DINO_INPUT with {dino_input}")
+                        print(f"   🔧 DINO weights {'trainable' if unfreeze_dino else 'frozen'}: freeze_backbone={not unfreeze_dino}")
                         print(f"   🔧 Set DINO output channels: {dino_channels} (matching YOLOv12{yolo_size} P4 level)")
     
     # FORCE the scale parameter in the config
@@ -358,6 +362,7 @@ def main():
     if args.dino_version:
         print(f"   DINO: DINOv{args.dino_version} + {args.dino_variant}")
         print(f"   Integration: {args.integration}")
+        print(f"   DINO Weights: {'Trainable' if args.unfreeze_dino else 'Frozen'}")
     else:
         print(f"   DINO: None (Base YOLOv12)")
     print(f"   Config: {model_config}")
@@ -374,7 +379,7 @@ def main():
         temp_config_path = None
         if args.dino_input:
             print(f"Using custom DINO input: {args.dino_input}")
-            temp_config_path = modify_yaml_config_for_custom_dino(model_config, args.dino_input, args.yolo_size, args.freeze_dino)
+            temp_config_path = modify_yaml_config_for_custom_dino(model_config, args.dino_input, args.yolo_size, args.unfreeze_dino)
             if temp_config_path != model_config:
                 model_config = temp_config_path
         
