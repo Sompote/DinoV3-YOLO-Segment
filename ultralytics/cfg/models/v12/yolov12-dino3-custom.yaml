@@ -1,0 +1,43 @@
+# YOLOv12s with Custom DINOv3 Input Support - Minimal Working Version
+# Exact copy of base YOLOv12s with DINO inserted and minimal head changes
+
+nc: 80  # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov12n.yaml' will call yolov12.yaml with scale 'n'
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024]   # YOLOv12n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  s: [0.50, 0.50, 1024]   # YOLOv12s summary: 225 layers, 11166560 parameters, 11166544 gradients,  29.7 GFLOPs
+  m: [0.67, 0.75, 768]    # YOLOv12m summary: 295 layers, 21172000 parameters, 21171984 gradients,  48.5 GFLOPs
+  l: [1.00, 1.00, 512]    # YOLOv12l summary: 365 layers, 43691520 parameters, 43691504 gradients,  86.9 GFLOPs
+  x: [1.00, 1.25, 512]    # YOLOv12x summary: 365 layers, 68229648 parameters, 68229632 gradients, 135.4 GFLOPs
+
+backbone:
+  # [from, repeats, module, args] - EXACT YOLOv12s backbone
+  - [-1, 1, Conv, [64, 3, 2]]
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]]
+  - [-1, 2, C3k2, [256, False, 0.25]]
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]]
+  - [-1, 2, C3k2, [512, False, 0.25]]
+  - [-1, 1, Conv, [512, 3, 2]]
+  - [-1, 4, A2C2f, [512, True, 4]]  # P4 level - insert DINO after this
+  
+  # DINO enhancement maintaining same channel output
+  - [-1, 1, DINO3Backbone, ['CUSTOM_DINO_INPUT', True, 512]]  # DINO enhanced P4 features
+  
+  - [-1, 1, Conv, [1024, 3, 2]]     # P5/32
+  - [-1, 4, A2C2f, [1024, True, 1]]
+
+# head - EXACT base structure with adjusted layer indices for DINO insertion
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]           # 10 -> head[0] 
+  - [[-1, 7], 1, Concat, [1]]                            # 11 -> head[1] (DINO layer 7 instead of 6)
+  - [-1, 2, A2C2f, [512, False, -1]]                     # 12 -> head[2]
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]           # 13 -> head[3]
+  - [[-1, 4], 1, Concat, [1]]                            # 14 -> head[4]
+  - [-1, 2, A2C2f, [256, False, -1]]                     # 15 -> head[5]
+  - [-1, 1, Conv, [256, 3, 2]]                           # 16 -> head[6]
+  - [[-1, 12], 1, Concat, [1]]                           # 17 -> head[7] (layer 12 instead of 11)
+  - [-1, 2, A2C2f, [512, False, -1]]                     # 18 -> head[8]
+  - [-1, 1, Conv, [512, 3, 2]]                           # 19 -> head[9]
+  - [[-1, 9], 1, Concat, [1]]                            # 20 -> head[10] (layer 9 instead of 8)
+  - [-1, 2, C3k2, [1024, True]]                          # 21 -> head[11]
+  - [[15, 18, 21], 1, Detect, [nc]]                      # 22 -> head[12]

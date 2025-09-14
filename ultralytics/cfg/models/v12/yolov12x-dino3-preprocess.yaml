@@ -1,0 +1,47 @@
+# YOLOv12x with DINOv3 Preprocessing - EXTRA LARGE VERSION
+# Architecture: Input -> DINO3Preprocessor -> Original YOLOv12x
+# Uses original YOLOv12x architecture with DINO preprocessing at input level
+
+nc: 80  # number of classes
+scale: x  # force extra large scale
+
+scales: # model compound scaling constants (from standard yolov12.yaml)
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024] # summary: 497 layers, 2,553,904 parameters, 2,553,888 gradients, 6.2 GFLOPs
+  s: [0.50, 0.50, 1024] # summary: 497 layers, 9,127,424 parameters, 9,127,408 gradients, 19.7 GFLOPs
+  m: [0.50, 1.00, 512] # summary: 533 layers, 19,670,784 parameters, 19,670,768 gradients, 60.4 GFLOPs
+  l: [1.00, 1.00, 512] # summary: 895 layers, 26,506,496 parameters, 26,506,480 gradients, 83.3 GFLOPs
+  x: [1.00, 1.50, 512] # summary: 895 layers, 59,414,176 parameters, 59,414,160 gradients, 185.9 GFLOPs
+
+backbone:
+  # [from, repeats, module, args] - DINO3 Preprocessor followed by exact YOLOv12x backbone
+  - [-1, 1, DINO3Preprocessor, ['DINO_MODEL_NAME', False, 3]]  # 0: Input enhancement (3 channels)
+  - [-1, 1, Conv, [64, 3, 2]]  # 1-P1/2 (3’96 channels with x scaling)
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 2-P2/4 (96’192 channels with x scaling)
+  - [-1, 2, C3k2, [256, False, 0.25]] # 3 (192’384 channels with x scaling)
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 4-P3/8 (384’384 channels with x scaling)
+  - [-1, 2, C3k2, [512, False, 0.25]] # 5 (384’768 channels with x scaling)
+  - [-1, 1, Conv, [512, 3, 2]] # 6-P4/16 (768’768 channels with x scaling)
+  - [-1, 4, A2C2f, [512, True, 4]] # 7 (768’768 channels with x scaling)
+  - [-1, 1, Conv, [1024, 3, 2]] # 8-P5/32 (768’1536 channels with x scaling)
+  - [-1, 4, A2C2f, [1024, True, 1]] # 9 (1536’1536 channels with x scaling)
+
+# YOLOv12x head - adjusted layer indices for preprocessor insertion
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 10
+  - [[-1, 7], 1, Concat, [1]] # 11: cat backbone P4 (layer 7)
+  - [-1, 2, A2C2f, [512, False, -1]] # 12
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 13
+  - [[-1, 5], 1, Concat, [1]] # 14: cat backbone P3 (layer 5)
+  - [-1, 2, A2C2f, [256, False, -1]] # 15
+
+  - [-1, 1, Conv, [256, 3, 2]] # 16
+  - [[-1, 12], 1, Concat, [1]] # 17: cat head P4
+  - [-1, 2, A2C2f, [512, False, -1]] # 18
+
+  - [-1, 1, Conv, [512, 3, 2]] # 19
+  - [[-1, 9], 1, Concat, [1]] # 20: cat head P5 (layer 9)
+  - [-1, 2, C3k2, [1024, True]] # 21
+
+  - [[15, 18, 21], 1, Detect, [nc]] # 22: Detect(P3, P4, P5)

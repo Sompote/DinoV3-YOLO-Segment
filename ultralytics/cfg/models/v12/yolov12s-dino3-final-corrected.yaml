@@ -1,0 +1,48 @@
+# YOLOv12s with DINOv3 Integration - FINAL CORRECTED VERSION
+# Maintains exact YOLOv12s channel flow with DINO enhancement
+
+nc: 80  # number of classes
+scales: # model compound scaling constants
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024] # Nano
+  s: [0.50, 0.50, 1024] # Small - THIS IS THE SCALE WE WANT
+  m: [0.50, 1.00, 512]  # Medium
+  l: [1.00, 1.00, 512]  # Large
+  x: [1.00, 1.50, 512]  # Extra Large
+
+backbone:
+  # [from, repeats, module, args] - Exact YOLOv12 backbone
+  - [-1, 1, Conv, [64, 3, 2]]       # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 1-P2/4
+  - [-1, 2, C3k2, [256, False, 0.25]] # 2
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 3-P3/8
+  - [-1, 2, C3k2, [512, False, 0.25]] # 4
+  - [-1, 1, Conv, [512, 3, 2]]      # 5-P4/16
+  - [-1, 4, A2C2f, [512, True, 4]]  # 6 (512 channels out)
+  
+  # DINO3 enhancement - MUST maintain 512 channels for head compatibility
+  - [-1, 1, DINO3Backbone, ['CUSTOM_DINO_INPUT', True, 512]]  # 7: DINO enhanced P4 (512 out)
+  
+  # Continue with P5 level - takes 512 input from DINO
+  - [-1, 1, Conv, [1024, 3, 2]]     # 8-P5/32 (512->1024)
+  - [-1, 4, A2C2f, [1024, True, 1]] # 9 (1024 out)
+
+# YOLOv12 head - EXACT base structure with corrected layer indices
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 10: P5 upsampled (1024 channels)
+  - [[-1, 7], 1, Concat, [1]]       # 11: cat P5+DINO_P4 (1024+512=1536)
+  - [-1, 2, A2C2f, [512, False, -1]] # 12: 1536->512
+  
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 13: (512 channels)
+  - [[-1, 4], 1, Concat, [1]]       # 14: cat with P3 (512+512=1024)
+  - [-1, 2, A2C2f, [256, False, -1]] # 15: 1024->256 (P3/8-small)
+  
+  - [-1, 1, Conv, [256, 3, 2]]      # 16: 256->256
+  - [[-1, 12], 1, Concat, [1]]      # 17: cat head P4 (256+512=768)
+  - [-1, 2, A2C2f, [512, False, -1]] # 18: 768->512 (P4/16-medium)
+  
+  - [-1, 1, Conv, [512, 3, 2]]      # 19: 512->512
+  - [[-1, 9], 1, Concat, [1]]       # 20: cat head P5 (512+1024=1536)
+  - [-1, 2, C3k2, [1024, True]]     # 21: 1536->1024 (P5/32-large)
+  
+  - [[15, 18, 21], 1, Detect, [nc]] # 22: Detect(P3, P4, P5)

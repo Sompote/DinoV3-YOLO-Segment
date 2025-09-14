@@ -1,0 +1,51 @@
+# YOLOv12s with DINOv3 Integration - SCALE CORRECTED VERSION
+# This configuration properly handles the 's' scale and channel dimensions
+
+nc: 80  # number of classes
+scale: s  # EXPLICITLY SET SCALE TO 's' (SMALL)
+
+scales: # model compound scaling constants
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024] # Nano   - A2C2f outputs 128 channels  
+  s: [0.50, 0.50, 1024] # Small  - A2C2f outputs 256 channels
+  m: [0.50, 1.00, 512]  # Medium - A2C2f outputs 512 channels
+  l: [1.00, 1.00, 512]  # Large  - A2C2f outputs 512 channels
+  x: [1.00, 1.50, 512]  # Extra Large - A2C2f outputs 768 channels
+
+backbone:
+  # [from, repeats, module, args] - Exact YOLOv12 backbone scaled for 's'
+  - [-1, 1, Conv, [64, 3, 2]]       # 0-P1/2  (32 for 's')
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 1-P2/4  (64 for 's')
+  - [-1, 2, C3k2, [256, False, 0.25]] # 2       (128 for 's')
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 3-P3/8  (128 for 's')
+  - [-1, 2, C3k2, [512, False, 0.25]] # 4       (256 for 's')
+  - [-1, 1, Conv, [512, 3, 2]]      # 5-P4/16  (256 for 's')
+  - [-1, 4, A2C2f, [512, True, 4]]  # 6        (256 for 's')
+  
+  # DINO3 enhancement - MUST match the actual scaled output of layer 6
+  # For scale 's', A2C2f outputs 256 channels, so DINO should output 256
+  - [-1, 1, DINO3Backbone, ['CUSTOM_DINO_INPUT', True, 256]]  # 7: DINO enhanced P4 (256 for 's')
+  
+  # Continue with P5 level - takes 256 input from DINO (for scale 's')
+  - [-1, 1, Conv, [1024, 3, 2]]     # 8-P5/32  (256->512 for 's')
+  - [-1, 4, A2C2f, [1024, True, 1]] # 9        (512 for 's')
+
+# YOLOv12 head - EXACT base structure with corrected layer indices for scale 's'
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 10: P5 upsampled (512 channels for 's')
+  - [[-1, 7], 1, Concat, [1]]       # 11: cat P5+DINO_P4 (512+256=768 for 's')
+  - [-1, 2, A2C2f, [512, False, -1]] # 12: 768->256 for 's'
+  
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 13: (256 channels for 's')
+  - [[-1, 4], 1, Concat, [1]]       # 14: cat with P3 (256+256=512 for 's')
+  - [-1, 2, A2C2f, [256, False, -1]] # 15: 512->128 for 's' (P3/8-small)
+  
+  - [-1, 1, Conv, [256, 3, 2]]      # 16: 128->128 for 's'
+  - [[-1, 12], 1, Concat, [1]]      # 17: cat head P4 (128+256=384 for 's')
+  - [-1, 2, A2C2f, [512, False, -1]] # 18: 384->256 for 's' (P4/16-medium)
+  
+  - [-1, 1, Conv, [512, 3, 2]]      # 19: 256->256 for 's'
+  - [[-1, 9], 1, Concat, [1]]       # 20: cat head P5 (256+512=768 for 's')
+  - [-1, 2, C3k2, [1024, True]]     # 21: 768->512 for 's' (P5/32-large)
+  
+  - [[15, 18, 21], 1, Detect, [nc]] # 22: Detect(P3, P4, P5)

@@ -1,0 +1,58 @@
+# YOLOv12x with DINOv3 ViT-B/16 Dual-Scale Integration - EXTRA LARGE VERSION
+# Channel flow follows standard YOLOv12x exactly, with DINO at P3 and P4 levels
+# YOLOv12x uses width scaling = 1.5, so all channels are 1.5x standard size
+
+nc: 80  # number of classes
+scale: x  # force extra large scale
+
+scales: # model compound scaling constants (from standard yolov12.yaml)
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024] # summary: 497 layers, 2,553,904 parameters, 2,553,888 gradients, 6.2 GFLOPs
+  s: [0.50, 0.50, 1024] # summary: 497 layers, 9,127,424 parameters, 9,127,408 gradients, 19.7 GFLOPs
+  m: [0.50, 1.00, 512] # summary: 533 layers, 19,670,784 parameters, 19,670,768 gradients, 60.4 GFLOPs
+  l: [1.00, 1.00, 512] # summary: 895 layers, 26,506,496 parameters, 26,506,480 gradients, 83.3 GFLOPs
+  x: [1.00, 1.50, 512] # summary: 895 layers, 59,414,176 parameters, 59,414,160 gradients, 185.9 GFLOPs
+
+backbone:
+  # [from, repeats, module, args]
+  # Standard YOLOv12x backbone - EXACT copy from yolov12.yaml with DINO insertion at P3 and P4
+  # YOLOv12x channel progression: 3→96→192→384→384→768→768→768→1536→1536 (with x scaling 1.5x)
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2 (3→96 channels with x scaling)
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 1-P2/4 (96→192 channels with x scaling)
+  - [-1, 2, C3k2, [256, False, 0.25]]  # 2 (192→384 channels with x scaling)
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 3-P3/8 (384→384 channels with x scaling)
+  - [-1, 2, C3k2, [512, False, 0.25]]  # 4: Standard P3 (384→768 channels with x scaling)
+  
+  # DINO integration at P3 level - maintain exact same channel count
+  - [-1, 1, DINO3Backbone, ['dinov3_vitb16', False, 768]]  # 5: DINO enhanced P3 (768→768 channels)
+  
+  # Continue standard YOLOv12x backbone 
+  - [-1, 1, Conv, [512, 3, 2]] # 6-P4/16 (768→768 channels with x scaling)
+  - [-1, 4, A2C2f, [512, True, 4]]  # 7: Standard P4 (768→768 channels with x scaling)
+  
+  # DINO integration at P4 level - maintain exact same channel count
+  - [-1, 1, DINO3Backbone, ['dinov3_vitb16', False, 768]]  # 8: DINO enhanced P4 (768→768 channels)
+  
+  # Continue standard YOLOv12x backbone
+  - [-1, 1, Conv, [1024, 3, 2]] # 9-P5/32 (768→1536 channels with x scaling)
+  - [-1, 4, A2C2f, [1024, True, 1]]  # 10: Standard P5 (1536→1536 channels with x scaling)
+
+# Standard YOLOv12x head architecture (adjusted for dual DINO integration)
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 11 (1536→1536 channels)
+  - [[-1, 8], 1, Concat, [1]] # 12: cat P5 + enhanced P4 (1536 + 768 = 2304 channels)
+  - [-1, 2, A2C2f, [512, False, -1]] # 13: (2304 → 768 channels with x scaling)
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 14 (768→768 channels)
+  - [[-1, 5], 1, Concat, [1]] # 15: cat with enhanced P3 (768 + 768 = 1536 channels)
+  - [-1, 2, A2C2f, [256, False, -1]] # 16: P3/8-small (1536 → 384 channels with x scaling)
+
+  - [-1, 1, Conv, [256, 3, 2]] # 17: (384 → 384 channels with x scaling)
+  - [[-1, 13], 1, Concat, [1]] # 18: cat head P4 (384 + 768 = 1152 channels)
+  - [-1, 2, A2C2f, [512, False, -1]] # 19: P4/16-medium (1152 → 768 channels with x scaling)
+
+  - [-1, 1, Conv, [512, 3, 2]] # 20: (768 → 768 channels with x scaling)
+  - [[-1, 10], 1, Concat, [1]] # 21: cat head P5 (768 + 1536 = 2304 channels) 
+  - [-1, 2, C3k2, [1024, True]] # 22: P5/32-large (2304 → 1536 channels with x scaling)
+
+  - [[16, 19, 22], 1, Detect, [nc]] # 23: Detect(P3=384, P4=768, P5=1536)

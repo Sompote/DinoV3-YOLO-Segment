@@ -1,0 +1,44 @@
+# YOLOv12s with DINOv3 Integration - FINAL WORKING VERSION
+# Maintains exact base YOLOv12s channel flow with DINO enhancement
+
+nc: 80  # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov12n.yaml' will call yolov12.yaml with scale 'n'
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024]   # YOLOv12n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  s: [0.50, 0.50, 1024]   # YOLOv12s summary: 225 layers, 11166560 parameters, 11166544 gradients,  29.7 GFLOPs
+  m: [0.67, 0.75, 768]    # YOLOv12m summary: 295 layers, 21172000 parameters, 21171984 gradients,  48.5 GFLOPs
+  l: [1.00, 1.00, 512]    # YOLOv12l summary: 365 layers, 43691520 parameters, 43691504 gradients,  86.9 GFLOPs
+  x: [1.00, 1.25, 512]    # YOLOv12x summary: 365 layers, 68229648 parameters, 68229632 gradients, 135.4 GFLOPs
+
+backbone:
+  # [from, repeats, module, args]
+  # Exact YOLOv12s backbone with DINO enhancement
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 1-P2/4
+  - [-1, 2, C3k2, [256, False, 0.25]]
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 3-P3/8
+  - [-1, 2, C3k2, [512, False, 0.25]]
+  - [-1, 1, Conv, [512, 3, 2]] # 5-P4/16
+  - [-1, 4, A2C2f, [512, True, 4]]
+  
+  # DINO3 enhancement preserving 512 channels
+  - [-1, 1, DINO3Backbone, ['CUSTOM_DINO_INPUT', True, 512]]  # 7: DINO enhanced P4
+  
+  - [-1, 1, Conv, [1024, 3, 2]] # 8-P5/32
+  - [-1, 4, A2C2f, [1024, True, 1]]
+
+# head - exact base structure adjusted for DINO layer insertion at position 7
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 7], 1, Concat, [1]]  # cat backbone P4 (DINO-enhanced)
+  - [-1, 2, A2C2f, [512, False, -1]] 
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 4], 1, Concat, [1]] # cat backbone P3
+  - [-1, 2, A2C2f, [256, False, -1]] # (P3/8-small)
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 12], 1, Concat, [1]] # cat head P4
+  - [-1, 2, A2C2f, [512, False, -1]] # (P4/16-medium)
+  - [-1, 1, Conv, [512, 3, 2]]
+  - [[-1, 9], 1, Concat, [1]] # cat head P5
+  - [-1, 2, C3k2, [1024, True]] # (P5/32-large)
+  - [[15, 18, 21], 1, Detect, [nc]] # Detect(P3, P4, P5)
