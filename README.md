@@ -70,6 +70,12 @@ YOLOv12 surpasses all popular real-time object detectors in accuracy with compet
 
 ## 🎯 Model Zoo
 
+### 🏗️ **Detailed Technical Architecture**
+
+![YOLOv12 + DINOv3 Technical Architecture](assets/detailed_technical_architecture.svg)
+
+*Comprehensive technical architecture showing internal components, data flow, and feature processing pipeline for YOLOv12 + DINOv3 integration*
+
 ### 🚀 **DINOv3-YOLOv12 Integration - Three Integration Approaches**
 
 **YOLOv12 + DINOv3 Integration** - Enhanced object detection with Vision Transformers. This implementation provides **three distinct integration approaches** for maximum flexibility:
