@@ -27,30 +27,9 @@
 
 ## Updates
 
-- 2025/09/14: **🚀 NEW: Complete DINOv3-YOLOv12 Integration** - Added comprehensive integration with official DINOv3 models from Facebook Research! Features systematic architecture with 40+ model combinations, 3 integration approaches (Input P0, Single P4, Dual P3+P4), and support for all YOLOv12 sizes (n,s,l,x). Now includes **`--dino-input`** parameter for custom models and 100% test success rate across all variants.
+- 2025/09/14: **🚀 NEW: Complete DINOv3-YOLOv12 Integration** - Added comprehensive integration with official DINOv3 models from Facebook Research! Features systematic architecture with 40+ model combinations, 3 integration approaches (Input P0, Single P4, Dual P3+P4), and support for all model sizes (n,s,l,x). Now includes **`--dino-input`** parameter for custom models and 100% test success rate across all variants.
 
-- 2025/06/17: **Use this repo for YOLOv12 instead of [ultralytics](https://github.com/ultralytics/ultralytics/tree/main/ultralytics/cfg/models/12). Their implementation is inefficient, requires more memory, and has unstable training, which are fixed here!**
-  
-- 2025/07/01: YOLOv12's **classification** models are released, see [code](https://github.com/sunsmarterjie/yolov12/tree/Cls).
-- 2025/06/04: YOLOv12's **instance segmentation** models are released, see [code](https://github.com/sunsmarterjie/yolov12/tree/Seg).
-
-- 2025/04/15: Pretrain a YOLOv12 model with [LightlyTrain](https://docs.lightly.ai/train/stable/index.html), a novel framework that lets you pretrain any computer vision model on your unlabeled data, with [YOLOv12 support](https://docs.lightly.ai/train/stable/models/yolov12.html). Here is also a [Colab tutorial](https://colab.research.google.com/github/lightly-ai/lightly-train/blob/main/examples/notebooks/yolov12.ipynb)!
-
-- 2025/03/18: Some guys are interested in the heatmap. See this [issue](https://github.com/sunsmarterjie/yolov12/issues/74).
-
-- 2025/03/09: **YOLOv12-turbo** is released: a faster YOLOv12 version.
-
-- 2025/02/24: Blogs: [ultralytics](https://docs.ultralytics.com/models/yolo12/), [LearnOpenCV](https://learnopencv.com/yolov12/). Thanks to them!
-
-- 2025/02/22: [YOLOv12 TensorRT CPP Inference Repo + Google Colab Notebook](https://github.com/mohamedsamirx/YOLOv12-TensorRT-CPP).
-
-- 2025/02/22: [Android deploy](https://github.com/mpj1234/ncnn-yolov12-android/tree/main) / [TensorRT-YOLO](https://github.com/laugh12321/TensorRT-YOLO) accelerates yolo12. Thanks to them!
-
-- 2025/02/20: [Any computer or edge device?](https://github.com/roboflow/inference)  / [ONNX CPP Version](https://github.com/mohamedsamirx/YOLOv12-ONNX-CPP). Thanks to them! 
-  
-- 2025/02/20: Train a yolov12 model on a custom dataset: [Blog](https://blog.roboflow.com/train-yolov12-model/) and [Youtube](https://www.youtube.com/watch?v=fksJmIMIfXo). / [Step-by-step instruction](https://youtu.be/dO8k5rgXG0M). Thanks to them! 
-
-- 2025/02/19: [arXiv version](https://arxiv.org/abs/2502.12524) is public. [Demo](https://huggingface.co/spaces/sunsmarterjieleaf/yolov12) is available (try [Demo2](https://huggingface.co/spaces/sunsmarterjieleaf/yolov12_demo2) [Demo3](https://huggingface.co/spaces/sunsmarterjieleaf/yolov12_demo3) if busy).
+- 2025/02/19: [arXiv version](https://arxiv.org/abs/2502.12524) is public. [Demo](https://huggingface.co/spaces/sunsmarterjieleaf/yolov12) is available.
 
 
 <details>
@@ -348,25 +327,71 @@ python test_dino3_variants.py \
 
 
 
+## 🚀 Quick Start for New Users
+
+### 📥 **Complete Setup from GitHub**
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Sompote/DINOV3-YOLOV12.git
+cd DINOV3-YOLOV12
+
+# 2. Create conda environment
+conda create -n dinov3-yolov12 python=3.11
+conda activate dinov3-yolov12
+
+# 3. Install dependencies
+pip install -r requirements.txt
+pip install transformers  # For DINOv3 models
+pip install -e .
+
+# 4. Verify installation
+python -c "from ultralytics.nn.modules.block import DINO3Backbone; print('✅ DINOv3-YOLOv12 ready!')"
+
+# 5. Quick test (recommended)
+python train_yolov12_dino.py \
+    --data coco.yaml \
+    --yolo-size s \
+    --dino-input dinov3_vitb16 \
+    --epochs 1 \
+    --name quick_test
+```
+
+### ⚡ **One-Command Quick Start**
+
+```bash
+# For experienced users - complete setup and test in one go
+git clone https://github.com/Sompote/DINOV3-YOLOV12.git && \
+cd DINOV3-YOLOV12 && \
+conda create -n dinov3-yolov12 python=3.11 -y && \
+conda activate dinov3-yolov12 && \
+pip install -r requirements.txt transformers && \
+pip install -e . && \
+echo "✅ Setup complete! Run: python train_yolov12_dino.py --help"
+```
+
 ## Installation
 
-### 🔧 **Standard YOLOv12 Installation**
+### 🔧 **Standard Installation (Alternative)**
 ```bash
 wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu11torch2.2cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
 conda create -n yolov12 python=3.11
 conda activate yolov12
 pip install -r requirements.txt
+pip install transformers  # For DINOv3 models
 pip install -e .
 ```
 
-### 🧬 **DINOv3 Enhanced Installation**
-For YOLOv12 + DINOv3 integration, install additional dependencies:
+### ✅ **Verify Installation**
 ```bash
-# After standard installation above
-pip install transformers  # For DINOv3 models
-
-# Verify DINOv3 integration
+# Test DINOv3 integration
 python -c "from ultralytics.nn.modules.block import DINO3Backbone; print('✅ DINOv3 ready!')"
+
+# Test training script
+python train_yolov12_dino.py --help
+
+# Quick functionality test
+python test_yolov12l_dual.py
 ```
 
 ## Validation
