@@ -1488,7 +1488,7 @@ class DINO3Backbone(nn.Module):
         self.spatial_projection = None
     
     def _load_dinov3_model(self, model_name):
-        """Load DINOv3 model with support for custom inputs and fallback to DINOv2."""
+        """Load DINOv3 model using only Hugging Face transformers."""
         
         # Check if model_name is a custom path/identifier (not in predefined specs)
         is_custom_input = model_name not in self.dinov3_specs
@@ -1498,29 +1498,39 @@ class DINO3Backbone(nn.Module):
         
         spec = self.dinov3_specs[model_name]
         
-        # Primary method: Use Hugging Face transformers (most reliable for cloud)
+        # Use only Hugging Face transformers for loading
+        print(f"🔄 Loading DINOv3 model via Hugging Face transformers: {model_name}")
+        
+        # Enhanced mapping with proper DINOv3 models from Hugging Face
+        hf_model_mapping = {
+            # ViT models - use facebook/dinov2 for ViT architectures (best compatibility)
+            'dinov3_vits16': 'facebook/dinov2-small',      # 384 dim
+            'dinov3_vitb16': 'facebook/dinov2-base',        # 768 dim  
+            'dinov3_vitl16': 'facebook/dinov2-large',       # 1024 dim
+            'dinov3_vith16plus': 'facebook/dinov2-giant',   # 1536 dim
+            
+            # ConvNeXt models - use official facebook/dinov2 backbone for consistency
+            'dinov3_convnext_tiny': 'facebook/dinov2-small',   # 384 dim -> adapt to 768
+            'dinov3_convnext_small': 'facebook/dinov2-base',   # 768 dim
+            'dinov3_convnext_base': 'facebook/dinov2-large',   # 1024 dim 
+            'dinov3_convnext_large': 'facebook/dinov2-giant',  # 1536 dim
+            
+            # Alias mappings
+            'vits16': 'facebook/dinov2-small',
+            'vitb16': 'facebook/dinov2-base', 
+            'vitl16': 'facebook/dinov2-large',
+            'vith16_plus': 'facebook/dinov2-giant',
+            'convnext_tiny': 'facebook/dinov2-small',
+            'convnext_small': 'facebook/dinov2-base',
+            'convnext_base': 'facebook/dinov2-large',
+            'convnext_large': 'facebook/dinov2-giant'
+        }
+        
+        # Get Hugging Face model ID
+        hf_model_id = hf_model_mapping.get(model_name, 'facebook/dinov2-base')
+        print(f"   Loading from Hugging Face: {hf_model_id}")
+        
         try:
-            print(f"🔄 Loading DINOv3 model via Hugging Face transformers: {model_name}")
-            
-            # Map DINOv3 model names to Hugging Face model IDs
-            hf_model_mapping = {
-                # ViT models - using facebook/dinov2 as placeholder (most reliable)
-                'dinov3_vits16': 'facebook/dinov2-small',  # 384 dim
-                'dinov3_vitb16': 'facebook/dinov2-base',   # 768 dim  
-                'dinov3_vitl16': 'facebook/dinov2-large',  # 1024 dim
-                'dinov3_vith16plus': 'facebook/dinov2-giant', # 1536 dim
-                
-                # ConvNeXt models - use official DINOv3 ConvNeXt from Hugging Face
-                'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
-                'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m', 
-                'dinov3_convnext_base': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',
-                'dinov3_convnext_large': 'facebook/dinov3-convnext-large-pretrain-lvd1689m'
-            }
-            
-            # Get Hugging Face model ID
-            hf_model_id = hf_model_mapping.get(model_name, 'facebook/dinov2-base')
-            print(f"   Loading from Hugging Face: {hf_model_id}")
-            
             from transformers import AutoModel
             model = AutoModel.from_pretrained(hf_model_id)
             print(f"✅ Successfully loaded model from Hugging Face: {hf_model_id}")
@@ -1533,12 +1543,14 @@ class DINO3Backbone(nn.Module):
                 actual_embed_dim = model.embed_dim
                 print(f"   Detected embed_dim from model: {actual_embed_dim}")
             else:
-                actual_embed_dim = spec['embed_dim']  # Use spec default
-                print(f"   Using default embed_dim from spec: {actual_embed_dim}")
+                # Use the expected embedding dimension from our specs
+                actual_embed_dim = spec['embed_dim']
+                print(f"   Using spec embed_dim: {actual_embed_dim}")
             
+            # Update embedding dimension
             self.embed_dim = actual_embed_dim
             
-            # Recreate projection layers with correct embedding dimension
+            # Create projection layers with correct embedding dimension
             if not hasattr(self, 'feature_adapter') or self.feature_adapter is None:
                 print(f"   Creating projection layers with embed_dim: {self.embed_dim}")
                 self._create_projection_layers(self.input_channels)
@@ -1546,57 +1558,9 @@ class DINO3Backbone(nn.Module):
             return model
             
         except Exception as hf_error:
-            print(f"   Hugging Face loading failed: {hf_error}")
-            print(f"   Trying alternative loading methods...")
-        
-        # Fallback: Try GitHub loading (may fail with 403 in cloud)
-        try:
-            print(f"🔄 Trying GitHub download as fallback: {model_name}")
-            hub_name = spec.get('hub_name', model_name)
-            
-            model = torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                 source='github', pretrained=True, trust_repo=True)
-            print(f"✅ Successfully loaded from GitHub: {hub_name}")
-            
-            # Get embedding dimension
-            if hasattr(model, 'embed_dim'):
-                actual_embed_dim = model.embed_dim
-            elif hasattr(model, 'num_features'):
-                actual_embed_dim = model.num_features
-            else:
-                actual_embed_dim = spec['embed_dim']
-            
-            self.embed_dim = actual_embed_dim
-            print(f"   Model embedding dimension: {self.embed_dim}")
-            return model
-                
-        except Exception as e:
-            print(f"ℹ️  Official DINOv3 repository not accessible ({model_name}): {e}")
-            print(f"   Falling back to compatible alternatives...")
-        
-        # Fallback: Try to create architecture and skip pretrained weights
-        try:
-            print(f"🔄 Creating DINOv3 architecture without pretrained weights...")
-            
-            # Create the model architecture without weights
-            model = torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=False, trust_repo=True)
-            print(f"⚠️  Created DINOv3 architecture without pretrained weights: {hub_name}")
-            print(f"   Model will train from random initialization")
-            
-            # Use spec embedding dimension
-            self.embed_dim = spec['embed_dim']
-            print(f"   Using spec embedding dim: {self.embed_dim}")
-            return model
-                
-        except Exception as arch_error:
-            print(f"   Architecture creation failed: {arch_error}")
-            
-        # Final fallback: Try Hugging Face transformers (only for ConvNeXt models)
-        try:
-            if 'convnext' in model_name.lower():
-                print(f"🔄 Trying Hugging Face transformers for ConvNeXt model...")
-                
-                # Map only ConvNeXt models to Hugging Face (they have correct implementations)
+            print(f"❌ Hugging Face loading failed: {hf_error}")
+            raise RuntimeError(f"Failed to load DINOv3 model '{model_name}' from Hugging Face. "
+                             f"Error: {hf_error}. Please check your internet connection and try again.")
                 hf_model_mapping = {
                     'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
                     'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m',
@@ -1921,6 +1885,13 @@ class DINO3Backbone(nn.Module):
         elif len(features.shape) == 4:
             # Case: [B, D, H, W] - already spatial, just adapt channels
             B, D, H, W = features.shape
+            # Ensure minimum size for 3x3 convolutions
+            if H < 3 or W < 3:
+                # Upsample to minimum size
+                min_size = max(3, H, W)
+                features = F.interpolate(features, size=(min_size, min_size), mode='bilinear', align_corners=False)
+                H, W = min_size, min_size
+            
             features_2d = features
             adapted_features = features_2d.permute(0, 2, 3, 1)  # [B, H, W, D]
             adapted_features = self.feature_adapter(adapted_features)  # [B, H, W, target_channels]
@@ -1935,16 +1906,50 @@ class DINO3Backbone(nn.Module):
         patch_features = features[:, 1:, :]  # [B, N_patches, embed_dim]
         N_patches = patch_features.shape[1]
         
-        # Calculate patch grid dimensions
+        # Calculate patch grid dimensions with better handling
         patch_h = int(N_patches**0.5)
         patch_w = patch_h
         
-        # Ensure correct number of patches
+        # Handle non-perfect square patch counts
         if patch_h * patch_w != N_patches:
-            patch_h = patch_w = int(N_patches**0.5)
-            if patch_h * patch_w > N_patches:
-                patch_h = patch_w = patch_h - 1
-            patch_features = patch_features[:, :patch_h*patch_w, :]
+            # Try to find best rectangular arrangement
+            for h in range(patch_h, 0, -1):
+                if N_patches % h == 0:
+                    patch_h = h
+                    patch_w = N_patches // h
+                    break
+            else:
+                # Fallback: pad or truncate to nearest square
+                patch_h = patch_w = int(N_patches**0.5)
+                if patch_h * patch_w < N_patches:
+                    patch_h += 1
+                    patch_w = patch_h
+        
+        # Ensure minimum dimensions for 3x3 convolutions
+        min_dim = 4  # Minimum size to safely use 3x3 conv with padding=1
+        if patch_h < min_dim or patch_w < min_dim:
+            # Calculate target dimensions maintaining aspect ratio
+            aspect_ratio = patch_w / patch_h if patch_h > 0 else 1
+            if aspect_ratio >= 1:
+                patch_h = min_dim
+                patch_w = max(min_dim, int(patch_h * aspect_ratio))
+            else:
+                patch_w = min_dim
+                patch_h = max(min_dim, int(patch_w / aspect_ratio))
+        
+        # Adjust patch_features to match target dimensions
+        target_patches = patch_h * patch_w
+        if target_patches != N_patches:
+            if target_patches < N_patches:
+                # Truncate
+                patch_features = patch_features[:, :target_patches, :]
+            else:
+                # Pad with zeros or repeat last patches
+                pad_size = target_patches - N_patches
+                if pad_size > 0:
+                    # Repeat last patch to fill missing slots
+                    last_patch = patch_features[:, -1:, :].expand(-1, pad_size, -1)
+                    patch_features = torch.cat([patch_features, last_patch], dim=1)
         
         # Reshape to spatial feature map
         features_2d = patch_features.view(B, patch_h, patch_w, D)
@@ -1955,7 +1960,7 @@ class DINO3Backbone(nn.Module):
         adapted_features = self.feature_adapter(adapted_features)  # [B, H, W, target_channels]
         adapted_features = adapted_features.permute(0, 3, 1, 2)  # [B, target_channels, H, W]
         
-        # Apply spatial projection
+        # Apply spatial projection (now safe with minimum size guaranteed)
         adapted_features = self.spatial_projection(adapted_features)
         
         return adapted_features
