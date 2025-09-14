@@ -1386,6 +1386,10 @@ class DINO3Backbone(nn.Module):
     providing advanced feature extraction capabilities based on the latest DINO3 architecture.
     DINOv3 offers improved dense features and better performance across vision tasks.
     
+    CLOUD CONSISTENCY: Always downloads fresh weights from official URLs to ensure
+    consistent behavior between local and cloud environments. Uses force_reload=True
+    to bypass caching issues that can cause weight mismatches.
+    
     Args:
         model_name (str): DINOv3 model variant ('dinov3_vits16', 'dinov3_vitb16', 
                          'dinov3_vitl16', 'dinov3_vith16_plus', 'dinov3_vit7b16')
@@ -1393,7 +1397,7 @@ class DINO3Backbone(nn.Module):
         output_channels (int): Number of output channel dimensions for features
         
     Attributes:
-        dino_model: Pretrained DINOv3 model
+        dino_model: Pretrained DINOv3 model (always fresh download)
         freeze_backbone: Flag to control weight freezing
         feature_adapters: Projection layers to match YOLOv12 channel dimensions
         
@@ -1494,17 +1498,14 @@ class DINO3Backbone(nn.Module):
         
         spec = self.dinov3_specs[model_name]
         
-        # Try official DINOv3 loading using PyTorch Hub pattern from documentation
+        # Try fresh download of DINOv3 weights (no caching for cloud consistency)
         try:
-            print(f"🔄 Loading DINOv3 model using official PyTorch Hub pattern: {model_name}")
+            print(f"🔄 Loading DINOv3 model with fresh download: {model_name}")
             hub_name = spec.get('hub_name', model_name)
             
             import os
-            import subprocess
-            
-            # Prepare local DINOv3 repository directory
-            cache_dir = os.path.expanduser("~/.cache/torch/hub")
-            repo_dir = os.path.join(cache_dir, "facebookresearch_dinov3_main")
+            import tempfile
+            import shutil
             
             # Official DINOv3 weight URLs with correct hashes from GitHub
             dinov3_weight_urls = {
@@ -1525,37 +1526,53 @@ class DINO3Backbone(nn.Module):
             # Get official weight URL
             weight_url = dinov3_weight_urls.get(hub_name, dinov3_weight_urls.get(model_name))
             
-            # Method 1: Try official PyTorch Hub pattern
+            # Method 1: Always use fresh GitHub download for consistency
             try:
-                # Ensure repository exists
-                if not os.path.exists(repo_dir):
-                    print(f"   Cloning DINOv3 repository to: {repo_dir}")
-                    # Download the repository first
-                    torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=False, trust_repo=True)
+                print(f"   Downloading fresh model from GitHub: {hub_name}")
+                print(f"   Official weight URL: {weight_url}")
                 
-                # Use official pattern: load from local repo with weight URL
-                if weight_url:
-                    print(f"   Loading model: {hub_name}")
-                    print(f"   Using weights: {weight_url}")
-                    model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
-                    print(f"✅ Successfully loaded DINOv3 using official PyTorch Hub pattern")
-                else:
-                    print(f"   Loading without specific pretrained weights...")
-                    model = torch.hub.load(repo_dir, hub_name, source='local')
-                    print(f"⚠️  Loaded DINOv3 architecture without pretrained weights")
+                # Force fresh download by setting force_reload=True
+                model = torch.hub.load('facebookresearch/dinov3', hub_name, 
+                                     source='github', pretrained=True, trust_repo=True, 
+                                     force_reload=True)
+                print(f"✅ Successfully loaded fresh DINOv3 model from GitHub")
                     
-            except Exception as local_error:
-                print(f"   Local repo loading failed: {local_error}")
+            except Exception as github_error:
+                print(f"   Fresh GitHub download failed: {github_error}")
                 
-                # Method 2: Direct GitHub loading (fallback)
-                if 'custom_fwd' in str(local_error):
-                    print(f"   PyTorch version compatibility issue, trying direct download...")
-                    # Skip the local repo due to version issues
-                    raise Exception("PyTorch version compatibility")
+                # Method 2: Try with explicit weight URL (bypass any caching issues)
+                if weight_url and 'custom_fwd' not in str(github_error):
+                    try:
+                        print(f"   Trying direct weight download with explicit URL...")
+                        
+                        # Create temporary directory for fresh repo clone
+                        with tempfile.TemporaryDirectory() as temp_dir:
+                            temp_repo = os.path.join(temp_dir, "dinov3_temp")
+                            
+                            # Download fresh repository
+                            print(f"   Cloning fresh repository to temporary location...")
+                            torch.hub.load('facebookresearch/dinov3', hub_name, 
+                                         source='github', pretrained=False, trust_repo=True,
+                                         force_reload=True)
+                            
+                            # Get the actual cached repo location  
+                            cache_dir = os.path.expanduser("~/.cache/torch/hub")
+                            repo_dir = os.path.join(cache_dir, "facebookresearch_dinov3_main")
+                            
+                            # Load with explicit weight URL
+                            model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
+                            print(f"✅ Successfully loaded DINOv3 with explicit weight URL")
+                        
+                    except Exception as url_error:
+                        print(f"   Direct weight URL loading failed: {url_error}")
+                        raise Exception("All direct loading methods failed")
                 else:
-                    print(f"   Trying direct GitHub source...")
-                    model = torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=True, trust_repo=True)
-                    print(f"✅ Successfully loaded DINOv3 from GitHub (direct)")
+                    # PyTorch compatibility issue detected
+                    if 'custom_fwd' in str(github_error):
+                        print(f"   PyTorch version compatibility issue detected")
+                        raise Exception("PyTorch version compatibility")
+                    else:
+                        raise github_error
             
             # Get actual embedding dimension from loaded model
             if hasattr(model, 'embed_dim'):
