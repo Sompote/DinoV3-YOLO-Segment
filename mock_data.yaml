@@ -1,8 +1,0 @@
-# Mock dataset configuration for testing
-path: /tmp/mock_dataset
-train: images/train
-val: images/val
-
-# Classes (simplified)
-names:
-  0: crack
