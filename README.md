@@ -553,37 +553,67 @@ This repository includes **official DINOv3 integration** directly from Facebook 
 
 ## ⚡ **Advanced Training Options**
 
-### 🧊 **DINO Backbone Freezing**
+### 🔥 **DINO Weight Control: `--unfreeze-dino`**
 
-By default, DINO weights are **trainable** during training. Use `--freeze-dino` to freeze DINO backbone weights for transfer learning:
+By default, DINO weights are **FROZEN** ❄️ for optimal training efficiency. Use `--unfreeze-dino` to make DINO weights trainable for advanced fine-tuning:
 
 ```bash
-# Default behavior - DINO weights are trainable
+# Default behavior (Recommended) - DINO weights are FROZEN
 python train_yolov12_dino.py \
     --data coco.yaml \
-    --yolo-size l \
-    --dino-input dinov3_vitb16 \
+    --yolo-size s \
+    --dino-variant vitb16 \
+    --integration single \
     --epochs 100
 
-# Freeze DINO weights for faster training and transfer learning  
+# Advanced: Make DINO weights TRAINABLE for fine-tuning
 python train_yolov12_dino.py \
     --data coco.yaml \
-    --yolo-size l \
-    --dino-input dinov3_vitb16 \
-    --freeze-dino \
+    --yolo-size s \
+    --dino-variant vitb16 \
+    --integration single \
+    --unfreeze-dino \
     --epochs 100
 ```
 
-**When to use `--freeze-dino`:**
-- ✅ **Transfer learning**: Fine-tuning on small datasets
-- ✅ **Faster training**: Reduced computational requirements  
-- ✅ **Stable features**: Keep pretrained DINO representations
-- ✅ **Limited resources**: Lower memory usage during training
+#### **🎯 Weight Control Strategy Guide**
 
-**When to keep DINO trainable (default):**
-- ✅ **Large datasets**: Full end-to-end optimization
-- ✅ **Domain adaptation**: Adapt DINO features to your data
-- ✅ **Maximum performance**: Joint optimization of all parameters
+| Configuration | DINO Weights | VRAM Usage | Training Speed | Best For |
+|:--------------|:-------------|:-----------|:---------------|:---------|
+| **Default (Frozen)** ❄️ | Fixed | 🟢 Lower | ⚡ Faster | Production, general use |
+| **`--unfreeze-dino`** 🔥 | Trainable | 🔴 Higher | 🐌 Slower | Research, specialized domains |
+
+**✅ Use Default (Frozen) when:**
+- 🚀 **Fast training**: Optimal speed and efficiency
+- 💾 **Limited VRAM**: Lower memory requirements  
+- 🎯 **General use**: Most object detection tasks
+- 🏭 **Production**: Stable, reliable training
+
+**🔥 Use `--unfreeze-dino` when:**
+- 🔬 **Research**: Maximum model capacity
+- 🎨 **Domain adaptation**: Specialized datasets (medical, satellite, etc.)
+- 📊 **Large datasets**: Sufficient data for full fine-tuning  
+- 🏆 **Competition**: Squeeze every bit of performance
+
+#### **📚 Examples for All Integration Types**
+
+```bash
+# 1️⃣ Single P4 Integration
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-variant vitb16 --integration single
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-variant vitb16 --integration single --unfreeze-dino
+
+# 2️⃣ Dual P3+P4 Integration  
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-variant vitb16 --integration dual
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-variant vitb16 --integration dual --unfreeze-dino
+
+# 3️⃣ Input P0 Preprocessing
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-input dinov3_vitb16  
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-input dinov3_vitb16 --unfreeze-dino
+
+# 4️⃣ Full P0+P3+P4 Integration (Ultimate)
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-input dinov3_vitb16 --dino-variant vitb16 --integration dual
+python train_yolov12_dino.py --data data.yaml --yolo-size s --dino-input dinov3_vitb16 --dino-variant vitb16 --integration dual --unfreeze-dino
+```
 
 ### 🎯 **Quick Test**
 ```bash
