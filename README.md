@@ -562,9 +562,13 @@ python train_yolov12_dino.py \
 
 ## Acknowledgement
 
+**Made by AI Research Group, Department of Civil Engineering, KMUTT** 🏛️
+
 The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). Thanks for their excellent work!
 
 **Official DINOv3 Integration**: This implementation uses **official DINOv3 models** directly from Meta's Facebook Research repository: [facebookresearch/dinov3](https://github.com/facebookresearch/dinov3). The integration includes comprehensive support for all official DINOv3 variants and the innovative `--dino-input` parameter for custom model loading.
+
+**YOLOv12**: Based on the official YOLOv12 implementation with attention-centric architecture from [sunsmarterjie/yolov12](https://github.com/sunsmarterjie/yolov12).
 
 ## Citation
 
@@ -575,5 +579,31 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
   journal={arXiv preprint arXiv:2502.12524},
   year={2025}
 }
+
+@article{dinov3_yolov12_2024,
+  title={DINOv3-YOLOv12: Systematic Vision Transformer Integration for Enhanced Object Detection},
+  author={AI Research Group, Department of Civil Engineering, KMUTT},
+  journal={GitHub Repository},
+  year={2024},
+  url={https://github.com/Sompote/DINOV3-YOLOV12}
+}
 ```
+
+---
+
+<div align="center">
+
+### 🌟 **Star us on GitHub!**
+
+[![GitHub stars](https://img.shields.io/github/stars/Sompote/DINOV3-YOLOV12?style=social)](https://github.com/Sompote/DINOV3-YOLOV12/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Sompote/DINOV3-YOLOV12?style=social)](https://github.com/Sompote/DINOV3-YOLOV12/network/members)
+
+**🚀 Revolutionizing Object Detection with Systematic Vision Transformer Integration**
+
+*Made with ❤️ by the AI Research Group, Department of Civil Engineering*  
+*King Mongkut's University of Technology Thonburi (KMUTT)*
+
+[🔥 **Get Started Now**](#-quick-start-for-new-users) • [🎯 **Explore Models**](#-model-zoo) • [🏗️ **View Architecture**](#-architecture-three-ways-to-use-dino-with-yolov12)
+
+</div>
 
