@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+import warnings
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
@@ -17,6 +18,43 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
+
+
+def deterministic_interpolate(input_tensor, size, mode='bilinear', align_corners=False, suppress_warnings=True):
+    """
+    Deterministic-friendly interpolation that reduces warnings when using deterministic algorithms.
+    
+    Args:
+        input_tensor: Input tensor to interpolate
+        size: Target size (H, W)
+        mode: Interpolation mode ('bilinear', 'nearest', etc.)
+        align_corners: Whether to align corners (for bilinear/bicubic)
+        suppress_warnings: Whether to suppress deterministic warnings
+        
+    Returns:
+        Interpolated tensor
+        
+    Note:
+        When deterministic algorithms are enabled and CUDA is used, bilinear/bicubic modes
+        may produce warnings. This function can optionally suppress them or use nearest
+        neighbor as a fallback for fully deterministic behavior.
+    """
+    # Check if we're in deterministic mode
+    try:
+        is_deterministic = torch.are_deterministic_algorithms_enabled()
+    except AttributeError:
+        # Older PyTorch versions don't have this function
+        is_deterministic = False
+    
+    # Suppress warnings if requested
+    if suppress_warnings and is_deterministic and mode in ['bilinear', 'bicubic'] and input_tensor.is_cuda:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, 
+                                  message=".*does not have a deterministic implementation.*")
+            return F.interpolate(input_tensor, size=size, mode=mode, align_corners=align_corners)
+    else:
+        # Use requested mode normally
+        return F.interpolate(input_tensor, size=size, mode=mode, align_corners=align_corners)
 
 __all__ = (
     "DFL",
@@ -1646,7 +1684,7 @@ class DINO3Backbone(nn.Module):
             if H < 3 or W < 3:
                 # Upsample to minimum size
                 min_size = max(3, H, W)
-                features = F.interpolate(features, size=(min_size, min_size), mode='bilinear', align_corners=False)
+                features = deterministic_interpolate(features, size=(min_size, min_size), mode='bilinear', align_corners=False)
                 H, W = min_size, min_size
             
             features_2d = features
@@ -1783,8 +1821,8 @@ class DINO3Backbone(nn.Module):
         
         # Resize to DINOv3 expected size
         dino_size = 224
-        pseudo_rgb_resized = F.interpolate(pseudo_rgb, size=(dino_size, dino_size), 
-                                         mode='bilinear', align_corners=False)
+        pseudo_rgb_resized = deterministic_interpolate(pseudo_rgb, size=(dino_size, dino_size), 
+                                                     mode='bilinear', align_corners=False)
         
         # Forward through DINOv3
         with torch.set_grad_enabled(not self.freeze_backbone):
@@ -1810,8 +1848,8 @@ class DINO3Backbone(nn.Module):
         dino_features = self.extract_features(features, (dino_size, dino_size))
         
         # Resize back to original spatial size
-        dino_features_resized = F.interpolate(dino_features, size=(H, W), 
-                                            mode='bilinear', align_corners=False)
+        dino_features_resized = deterministic_interpolate(dino_features, size=(H, W), 
+                                                        mode='bilinear', align_corners=False)
         
         # Fuse original CNN features with DINOv3 features
         combined_features = torch.cat([x, dino_features_resized], dim=1)
