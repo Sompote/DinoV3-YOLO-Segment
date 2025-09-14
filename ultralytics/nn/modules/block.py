@@ -1499,109 +1499,139 @@ class DINO3Backbone(nn.Module):
             print(f"🔄 Loading DINOv3 model using official PyTorch Hub pattern: {model_name}")
             hub_name = spec.get('hub_name', model_name)
             
-            # Method 1: Try to get local repository directory and use official pattern
             import os
+            import subprocess
             
-            # Try to get or create local DINOv3 repository
+            # Prepare local DINOv3 repository directory
             cache_dir = os.path.expanduser("~/.cache/torch/hub")
             repo_dir = os.path.join(cache_dir, "facebookresearch_dinov3_main")
             
-            # Define weight URLs for pretrained models (LVD-1689M dataset)
+            # Official DINOv3 weight URLs with correct hashes from GitHub
             dinov3_weight_urls = {
-                'dinov3_vits16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vits16/dinov3_vits16_pretrain_lvd1689m.pth',
-                'dinov3_vitb16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitb16/dinov3_vitb16_pretrain_lvd1689m.pth', 
-                'dinov3_vitl16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitl16/dinov3_vitl16_pretrain_lvd1689m.pth',
-                'dinov3_vith16plus': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vith16_plus/dinov3_vith16_plus_pretrain_lvd1689m.pth',
-                'dinov3_vit7b16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vit7b16/dinov3_vit7b16_pretrain_lvd1689m.pth',
-                'dinov3_convnext_tiny': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_tiny/dinov3_convnext_tiny_pretrain_lvd1689m.pth',
-                'dinov3_convnext_small': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_small/dinov3_convnext_small_pretrain_lvd1689m.pth',
-                'dinov3_convnext_base': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_base/dinov3_convnext_base_pretrain_lvd1689m.pth',
-                'dinov3_convnext_large': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_large/dinov3_convnext_large_pretrain_lvd1689m.pth'
+                # ViT models pretrained on LVD-1689M (web images)
+                'dinov3_vits16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vits16/dinov3_vits16_pretrain_lvd1689m-08c60483.pth',
+                'dinov3_vitb16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitb16/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth',
+                'dinov3_vitl16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitl16/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth',
+                'dinov3_vith16plus': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vith16_plus/dinov3_vith16_plus_pretrain_lvd1689m-72b9c5b4.pth',
+                'dinov3_vit7b16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vit7b16/dinov3_vit7b16_pretrain_lvd1689m-afde73ea.pth',
+                
+                # ConvNeXt models pretrained on LVD-1689M (web images)  
+                'dinov3_convnext_tiny': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_tiny/dinov3_convnext_tiny_pretrain_lvd1689m-9c9c3f17.pth',
+                'dinov3_convnext_small': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_small/dinov3_convnext_small_pretrain_lvd1689m-16b07bb0.pth',
+                'dinov3_convnext_base': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_base/dinov3_convnext_base_pretrain_lvd1689m-3b3286b0.pth',
+                'dinov3_convnext_large': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_large/dinov3_convnext_large_pretrain_lvd1689m-6c20dc7b.pth',
             }
             
-            # Get weight URL for this model
+            # Get official weight URL
             weight_url = dinov3_weight_urls.get(hub_name, dinov3_weight_urls.get(model_name))
             
+            # Method 1: Try official PyTorch Hub pattern
             try:
-                # First try: Official PyTorch Hub pattern with local repo and weight URL
-                if os.path.exists(repo_dir) and weight_url:
-                    print(f"   Using local repo with weights: {weight_url}")
-                    model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
-                    print(f"✅ Successfully loaded DINOv3 with official PyTorch Hub pattern")
-                else:
-                    # Ensure we have the repository by loading it once
-                    print(f"   Downloading DINOv3 repository...")
+                # Ensure repository exists
+                if not os.path.exists(repo_dir):
+                    print(f"   Cloning DINOv3 repository to: {repo_dir}")
+                    # Download the repository first
                     torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=False, trust_repo=True)
+                
+                # Use official pattern: load from local repo with weight URL
+                if weight_url:
+                    print(f"   Loading model: {hub_name}")
+                    print(f"   Using weights: {weight_url}")
+                    model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
+                    print(f"✅ Successfully loaded DINOv3 using official PyTorch Hub pattern")
+                else:
+                    print(f"   Loading without specific pretrained weights...")
+                    model = torch.hub.load(repo_dir, hub_name, source='local')
+                    print(f"⚠️  Loaded DINOv3 architecture without pretrained weights")
                     
-                    # Now try with local repo and weights
-                    if weight_url:
-                        print(f"   Loading from local repo with weights: {weight_url}")
-                        model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
-                        print(f"✅ Successfully loaded DINOv3 with weights")
-                    else:
-                        print(f"   Loading without specific weights...")
-                        model = torch.hub.load(repo_dir, hub_name, source='local')
-                        print(f"⚠️  Loaded DINOv3 architecture (may not have pretrained weights)")
-                
             except Exception as local_error:
-                print(f"   Local loading failed: {local_error}")
-                print(f"   Fallback: Trying GitHub source directly...")
+                print(f"   Local repo loading failed: {local_error}")
                 
-                # Fallback: Load directly from GitHub
-                model = torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=True, trust_repo=True)
-                print(f"✅ Successfully loaded DINOv3 from GitHub (fallback)")
+                # Method 2: Direct GitHub loading (fallback)
+                if 'custom_fwd' in str(local_error):
+                    print(f"   PyTorch version compatibility issue, trying direct download...")
+                    # Skip the local repo due to version issues
+                    raise Exception("PyTorch version compatibility")
+                else:
+                    print(f"   Trying direct GitHub source...")
+                    model = torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=True, trust_repo=True)
+                    print(f"✅ Successfully loaded DINOv3 from GitHub (direct)")
             
-            # Verify and set embedding dimension
+            # Get actual embedding dimension from loaded model
             if hasattr(model, 'embed_dim'):
                 actual_embed_dim = model.embed_dim
+                print(f"   Detected embed_dim from model: {actual_embed_dim}")
             elif hasattr(model, 'num_features'):
-                actual_embed_dim = model.num_features
-            elif hasattr(model, 'backbone') and hasattr(model.backbone, 'embed_dim'):
-                actual_embed_dim = model.backbone.embed_dim
+                actual_embed_dim = model.num_features  
+                print(f"   Detected num_features from model: {actual_embed_dim}")
             else:
-                actual_embed_dim = spec['embed_dim']  # Use expected dimension
+                actual_embed_dim = spec['embed_dim']  # Use spec default
+                print(f"   Using default embed_dim from spec: {actual_embed_dim}")
             
-            print(f"   Model embedding dimension: {actual_embed_dim}")
             self.embed_dim = actual_embed_dim
+            
+            # Recreate projection layers with correct embedding dimension
+            if not hasattr(self, 'feature_adapter') or self.feature_adapter is None:
+                print(f"   Creating projection layers with embed_dim: {self.embed_dim}")
+                self._create_projection_layers(self.input_channels)
+            
             return model
                 
         except Exception as e:
             print(f"ℹ️  Official DINOv3 repository not accessible ({model_name}): {e}")
             print(f"   Falling back to compatible alternatives...")
         
-        # Fallback to Hugging Face transformers for cloud environments
+        # Fallback: Try to create architecture and skip pretrained weights
         try:
-            print(f"🔄 Trying Hugging Face transformers as cloud fallback...")
+            print(f"🔄 Creating DINOv3 architecture without pretrained weights...")
             
-            # Map DINOv3 model names to Hugging Face model IDs
-            hf_model_mapping = {
-                'dinov3_vits16': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',  # Closest available
-                'dinov3_vitb16': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',  # Closest available
-                'dinov3_vitl16': 'facebook/dinov3-convnext-large-pretrain-lvd1689m', # Closest available
-                'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
-                'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m',
-                'dinov3_convnext_base': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',
-                'dinov3_convnext_large': 'facebook/dinov3-convnext-large-pretrain-lvd1689m'
-            }
+            # Create the model architecture without weights
+            model = torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=False, trust_repo=True)
+            print(f"⚠️  Created DINOv3 architecture without pretrained weights: {hub_name}")
+            print(f"   Model will train from random initialization")
             
-            if model_name in hf_model_mapping:
-                from transformers import AutoModel
-                hf_model_id = hf_model_mapping[model_name]
-                print(f"   Loading {hf_model_id} from Hugging Face...")
+            # Use spec embedding dimension
+            self.embed_dim = spec['embed_dim']
+            print(f"   Using spec embedding dim: {self.embed_dim}")
+            return model
                 
-                model = AutoModel.from_pretrained(hf_model_id)
-                print(f"✅ Successfully loaded DINOv3 from Hugging Face: {hf_model_id}")
+        except Exception as arch_error:
+            print(f"   Architecture creation failed: {arch_error}")
+            
+        # Final fallback: Try Hugging Face transformers (only for ConvNeXt models)
+        try:
+            if 'convnext' in model_name.lower():
+                print(f"🔄 Trying Hugging Face transformers for ConvNeXt model...")
                 
-                # Update embed_dim based on loaded model
-                if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
-                    self.embed_dim = model.config.hidden_size
-                    print(f"   Detected embedding dim: {self.embed_dim}")
+                # Map only ConvNeXt models to Hugging Face (they have correct implementations)
+                hf_model_mapping = {
+                    'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
+                    'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m',
+                    'dinov3_convnext_base': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',
+                    'dinov3_convnext_large': 'facebook/dinov3-convnext-large-pretrain-lvd1689m'
+                }
+                
+                if model_name in hf_model_mapping:
+                    from transformers import AutoModel
+                    hf_model_id = hf_model_mapping[model_name]
+                    print(f"   Loading {hf_model_id} from Hugging Face...")
+                    
+                    model = AutoModel.from_pretrained(hf_model_id)
+                    print(f"✅ Successfully loaded DINOv3 ConvNeXt from Hugging Face: {hf_model_id}")
+                    
+                    # Get correct embedding dimension
+                    if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
+                        self.embed_dim = model.config.hidden_size
+                        print(f"   Detected embedding dim: {self.embed_dim}")
+                    else:
+                        self.embed_dim = spec['embed_dim']  # Use spec
+                        print(f"   Using spec embedding dim: {self.embed_dim}")
+                    
+                    return model
                 else:
-                    self.embed_dim = spec['embed_dim']  # Use original spec
-                
-                return model
+                    print(f"   No Hugging Face mapping for {model_name}")
             else:
-                print(f"   No Hugging Face mapping found for {model_name}")
+                print(f"   Skipping Hugging Face (ViT models not recommended)")
                 
         except Exception as hf_error:
             print(f"   Hugging Face loading failed: {hf_error}")
