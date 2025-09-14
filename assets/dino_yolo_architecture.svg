@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1400" height="1000" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="yoloGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8E53;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="dinoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4ECDC4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#44A08D;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="fusionGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="3" dy="3" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="1000" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="700" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#2c3e50">
+    DINO-YOLO Architecture: Three Integration Approaches
+  </text>
+  
+  <!-- Approach 1: Input Initial Processing (P0 Level) -->
+  <g id="approach1" transform="translate(50, 80)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#e74c3c">
+      1️⃣ Input Initial Processing (P0 Level) - Recommended
+    </text>
+    
+    <!-- Input Image -->
+    <rect x="0" y="40" width="80" height="60" fill="#3498db" rx="5" filter="url(#dropshadow)"/>
+    <text x="40" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Input</text>
+    <text x="40" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">640×640×3</text>
+    
+    <!-- Arrow 1 -->
+    <path d="M 90 70 L 120 70" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- DINO3 Preprocessor -->
+    <rect x="130" y="30" width="100" height="80" fill="url(#dinoGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="180" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">DINO3</text>
+    <text x="180" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Preprocessor</text>
+    <text x="180" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Enhanced RGB</text>
+    <text x="180" y="98" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">640×640×3</text>
+    
+    <!-- Arrow 2 -->
+    <path d="M 240 70 L 270 70" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- Original YOLOv12 -->
+    <rect x="280" y="40" width="120" height="60" fill="url(#yoloGrad)" rx="5" filter="url(#dropshadow)"/>
+    <text x="340" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Original YOLOv12</text>
+    <text x="340" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Backbone + Head</text>
+    
+    <!-- Arrow 3 -->
+    <path d="M 410 70 L 440 70" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- Output -->
+    <rect x="450" y="40" width="80" height="60" fill="#27ae60" rx="5" filter="url(#dropshadow)"/>
+    <text x="490" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Detection</text>
+    <text x="490" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Output</text>
+    
+    <!-- Benefits -->
+    <text x="0" y="140" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">✅ Clean architecture, no backbone modifications, stable training</text>
+  </g>
+  
+  <!-- Approach 2: Single-Scale Integration (P4 Level) -->
+  <g id="approach2" transform="translate(50, 250)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#f39c12">
+      2️⃣ Single-Scale Integration (P4 Level) - Efficient
+    </text>
+    
+    <!-- Input -->
+    <rect x="0" y="40" width="60" height="50" fill="#3498db" rx="5" filter="url(#dropshadow)"/>
+    <text x="30" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Input</text>
+    <text x="30" y="73" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">640×640×3</text>
+    
+    <!-- Arrow -->
+    <path d="M 70 65 L 90 65" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- YOLOv12 Backbone (P1-P3) -->
+    <rect x="100" y="30" width="80" height="70" fill="url(#yoloGrad)" rx="5" filter="url(#dropshadow)"/>
+    <text x="140" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">YOLOv12</text>
+    <text x="140" y="63" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Backbone</text>
+    <text x="140" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">P1→P2→P3</text>
+    <text x="140" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">40×40×256</text>
+    
+    <!-- Arrow -->
+    <path d="M 190 65 L 210 65" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- DINO3Backbone at P4 -->
+    <rect x="220" y="20" width="100" height="90" fill="url(#dinoGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="270" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">DINO3Backbone</text>
+    <text x="270" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">P4 Level</text>
+    <text x="270" y="68" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">ViT-B/16</text>
+    <text x="270" y="81" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">40×40×256</text>
+    <text x="270" y="94" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">→40×40×256</text>
+    
+    <!-- Arrow -->
+    <path d="M 330 65 L 350 65" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- YOLOv12 Head -->
+    <rect x="360" y="30" width="80" height="70" fill="url(#yoloGrad)" rx="5" filter="url(#dropshadow)"/>
+    <text x="400" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">YOLOv12</text>
+    <text x="400" y="68" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Head</text>
+    <text x="400" y="81" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">P3, P4, P5</text>
+    
+    <!-- Arrow -->
+    <path d="M 450 65 L 470 65" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- Output -->
+    <rect x="480" y="40" width="60" height="50" fill="#27ae60" rx="5" filter="url(#dropshadow)"/>
+    <text x="510" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Output</text>
+    <text x="510" y="73" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Detections</text>
+    
+    <!-- Benefits -->
+    <text x="0" y="140" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">⚡ Enhanced medium object detection, moderate computational cost</text>
+  </g>
+  
+  <!-- Approach 3: Dual-Scale Integration (P3+P4 Levels) -->
+  <g id="approach3" transform="translate(50, 420)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#9b59b6">
+      3️⃣ Dual-Scale Integration (P3+P4 Levels) - High Performance
+    </text>
+    
+    <!-- Input -->
+    <rect x="0" y="50" width="60" height="50" fill="#3498db" rx="5" filter="url(#dropshadow)"/>
+    <text x="30" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Input</text>
+    <text x="30" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">640×640×3</text>
+    
+    <!-- Arrow -->
+    <path d="M 70 75 L 90 75" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- YOLOv12 Early Layers -->
+    <rect x="100" y="40" width="70" height="70" fill="url(#yoloGrad)" rx="5" filter="url(#dropshadow)"/>
+    <text x="135" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">YOLOv12</text>
+    <text x="135" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">P1→P2</text>
+    <text x="135" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">80×80×256</text>
+    
+    <!-- Arrow to P3 DINO -->
+    <path d="M 180 75 L 200 75" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- DINO3 at P3 -->
+    <rect x="210" y="30" width="90" height="90" fill="url(#dinoGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="255" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">DINO3</text>
+    <text x="255" y="63" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">P3 Level</text>
+    <text x="255" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">80×80×256</text>
+    <text x="255" y="89" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Small Objects</text>
+    
+    <!-- Arrow to P4 -->
+    <path d="M 310 75 L 330 75" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- YOLOv12 to P4 -->
+    <rect x="340" y="60" width="60" height="30" fill="url(#yoloGrad)" rx="3" filter="url(#dropshadow)"/>
+    <text x="370" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Conv P4</text>
+    
+    <!-- Arrow to P4 DINO -->
+    <path d="M 410 75 L 430 75" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- DINO3 at P4 -->
+    <rect x="440" y="30" width="90" height="90" fill="url(#dinoGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="485" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">DINO3</text>
+    <text x="485" y="63" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">P4 Level</text>
+    <text x="485" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">40×40×512</text>
+    <text x="485" y="89" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Medium Objects</text>
+    
+    <!-- Arrow to Head -->
+    <path d="M 540 75 L 560 75" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- YOLOv12 Head -->
+    <rect x="570" y="40" width="80" height="70" fill="url(#yoloGrad)" rx="5" filter="url(#dropshadow)"/>
+    <text x="610" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">YOLOv12</text>
+    <text x="610" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Head</text>
+    <text x="610" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Multi-scale</text>
+    
+    <!-- Arrow to Output -->
+    <path d="M 660 75 L 680 75" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- Output -->
+    <rect x="690" y="50" width="60" height="50" fill="#27ae60" rx="5" filter="url(#dropshadow)"/>
+    <text x="720" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Output</text>
+    <text x="720" y="83" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Enhanced</text>
+    
+    <!-- Benefits -->
+    <text x="0" y="150" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">🎪 Enhanced small and medium object detection, highest performance</text>
+  </g>
+  
+  <!-- Technical Details Section -->
+  <g id="technical_details" transform="translate(50, 600)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#2c3e50">
+      🔧 Technical Implementation Details
+    </text>
+    
+    <!-- DINO3Backbone Details -->
+    <rect x="0" y="40" width="400" height="160" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1" rx="8"/>
+    <text x="20" y="60" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">DINO3Backbone Architecture:</text>
+    <text x="20" y="80" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Input Projection: CNN features → RGB-like (3 channels)</text>
+    <text x="20" y="95" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Resize to 224×224 for DINOv3 processing</text>
+    <text x="20" y="110" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• DINOv3 Processing: ViT/ConvNeXt feature extraction</text>
+    <text x="20" y="125" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Feature Adaptation: DINO features → YOLOv12 channels</text>
+    <text x="20" y="140" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Feature Fusion: Concatenate original + DINO features</text>
+    <text x="20" y="155" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Spatial Consistency: Bilinear interpolation resize back</text>
+    <text x="20" y="170" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Freezing Support: Optional backbone weight freezing</text>
+    <text x="20" y="185" font-family="Arial, sans-serif" font-size="11" fill="#e74c3c">• Integration Points: P4 (40×40) or P3+P4 (80×80+40×40)</text>
+    
+    <!-- Model Variants -->
+    <rect x="420" y="40" width="380" height="160" fill="#e8f5e8" stroke="#27ae60" stroke-width="1" rx="8"/>
+    <text x="440" y="60" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Available DINO Variants &amp; Commands:</text>
+    <text x="440" y="80" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• ViT Models: vits16, vitb16, vitl16, vith16_plus, vit7b16</text>
+    <text x="440" y="95" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• ConvNeXt: tiny, small, base, large (CNN-ViT hybrid)</text>
+    <text x="440" y="110" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Parameters: 21M - 6.7B | Memory: 1GB - 100GB+ VRAM</text>
+    <text x="440" y="125" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• Performance: +5-18% mAP improvement over base YOLOv12</text>
+    <text x="440" y="140" font-family="monospace" font-size="10" fill="#8e44ad">--dino-input dinov3_vitb16 --integration single</text>
+    <text x="440" y="155" font-family="monospace" font-size="10" fill="#8e44ad">--dino-variant vitl16 --integration dual</text>
+    <text x="440" y="170" font-family="monospace" font-size="10" fill="#8e44ad">--freeze-dino  # Freeze DINO weights</text>
+    <text x="440" y="185" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">🎯 Recommended: yolov12s + vitb16 + single integration</text>
+  </g>
+  
+  <!-- Performance Comparison -->
+  <g id="performance" transform="translate(50, 820)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#2c3e50">
+      📊 Performance Comparison
+    </text>
+    
+    <!-- Base YOLOv12 -->
+    <rect x="0" y="40" width="180" height="80" fill="#3498db" stroke="#2980b9" stroke-width="2" rx="8"/>
+    <text x="90" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Base YOLOv12</text>
+    <text x="90" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">mAP: 47.6% (YOLOv12s)</text>
+    <text x="90" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Speed: 2.42ms</text>
+    <text x="90" y="101" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Params: 9.1M</text>
+    
+    <!-- Single-Scale DINO -->
+    <rect x="200" y="40" width="180" height="80" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="8"/>
+    <text x="290" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Single-Scale DINO</text>
+    <text x="290" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">mAP: +7-11% improvement</text>
+    <text x="290" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Speed: 1.5x slower</text>
+    <text x="290" y="101" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Params: ~95M</text>
+    
+    <!-- Dual-Scale DINO -->
+    <rect x="400" y="40" width="180" height="80" fill="#9b59b6" stroke="#8e44ad" stroke-width="2" rx="8"/>
+    <text x="490" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Dual-Scale DINO</text>
+    <text x="490" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">mAP: +10-18% improvement</text>
+    <text x="490" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Speed: 2x slower</text>
+    <text x="490" y="101" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Params: ~327M</text>
+  </g>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e"/>
+    </marker>
+  </defs>
+  
+  <!-- Footer -->
+  <text x="700" y="980" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#7f8c8d">
+    DINO-YOLO: Integrating Meta's DINOv3 Vision Transformers with YOLOv12 Object Detection
+  </text>
+  
+  <!-- Additional Architecture Info -->
+  <g id="architecture_info" transform="translate(800, 600)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">
+      🏗️ Architecture Features
+    </text>
+    
+    <rect x="0" y="35" width="280" height="180" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="8"/>
+    <text x="15" y="55" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#495057">Feature Pyramid Levels:</text>
+    <text x="15" y="72" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• P3: 80×80×256 (small objects)</text>
+    <text x="15" y="85" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• P4: 40×40×256/512 (medium objects)</text>
+    <text x="15" y="98" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• P5: 20×20×1024 (large objects)</text>
+    
+    <text x="15" y="120" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#495057">DINO Integration Benefits:</text>
+    <text x="15" y="137" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• Self-supervised visual features</text>
+    <text x="15" y="150" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• Rich semantic understanding</text>
+    <text x="15" y="163" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• Transfer learning capabilities</text>
+    <text x="15" y="176" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• Attention mechanism benefits</text>
+    <text x="15" y="189" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• Improved object localization</text>
+    <text x="15" y="202" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">• Better feature representations</text>
+  </g>
+</svg>

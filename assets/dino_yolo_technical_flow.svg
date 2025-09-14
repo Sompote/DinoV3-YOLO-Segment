@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="inputGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5dade2;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="cnnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e67e22;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f39c12;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="dinoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2ecc71;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="fusionGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8e44ad;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9b59b6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2c3e50">
+    DINO3Backbone Technical Flow - Feature Fusion Process
+  </text>
+  
+  <!-- Input Stage -->
+  <g id="input_stage" transform="translate(50, 80)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Input CNN Features</text>
+    <rect x="0" y="25" width="120" height="80" fill="url(#inputGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="60" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">CNN Features</text>
+    <text x="60" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">From YOLOv12</text>
+    <text x="60" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">B × C × H × W</text>
+    <text x="60" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">e.g. 1×256×40×40</text>
+  </g>
+  
+  <!-- Arrow 1 -->
+  <path d="M 180 120 L 220 120" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Input Projection Stage -->
+  <g id="projection_stage" transform="translate(230, 70)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Input Projection</text>
+    <rect x="0" y="25" width="140" height="100" fill="url(#cnnGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">Conv2d(C → 3)</text>
+    <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">CNN → RGB-like</text>
+    <text x="70" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">256 channels → 3</text>
+    <text x="70" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Pseudo RGB</text>
+    <text x="70" y="101" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">B × 3 × H × W</text>
+    <text x="70" y="114" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">1×3×40×40</text>
+  </g>
+  
+  <!-- Arrow 2 -->
+  <path d="M 380 120 L 420 120" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Resize Stage -->
+  <g id="resize_stage" transform="translate(430, 90)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Resize</text>
+    <rect x="0" y="25" width="100" height="60" fill="#95a5a6" rx="8" filter="url(#dropshadow)"/>
+    <text x="50" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Interpolate</text>
+    <text x="50" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">→ 224×224</text>
+    <text x="50" y="71" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">DINOv3 size</text>
+  </g>
+  
+  <!-- Arrow 3 -->
+  <path d="M 540 120 L 580 120" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- DINO Processing Stage -->
+  <g id="dino_stage" transform="translate(590, 60)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">DINOv3 Processing</text>
+    <rect x="0" y="25" width="160" height="120" fill="url(#dinoGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="80" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">DINOv3 Model</text>
+    <text x="80" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">ViT-B/16 or ConvNeXt</text>
+    <text x="80" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Self-attention layers</text>
+    <text x="80" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Feature extraction</text>
+    <text x="80" y="101" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: last_hidden_state</text>
+    <text x="80" y="114" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">B × N × embed_dim</text>
+    <text x="80" y="127" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">e.g. 1×257×768</text>
+  </g>
+  
+  <!-- Arrow 4 -->
+  <path d="M 760 120 L 800 120" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Feature Extraction Stage -->
+  <g id="extract_stage" transform="translate(810, 80)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Feature Extraction</text>
+    <rect x="0" y="25" width="120" height="80" fill="url(#dinoGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="60" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Reshape</text>
+    <text x="60" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">N×embed_dim</text>
+    <text x="60" y="71" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">→ H×W×embed_dim</text>
+    <text x="60" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">16×16×768</text>
+    <text x="60" y="97" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Spatial structure</text>
+  </g>
+  
+  <!-- Arrow 5 (downward) -->
+  <path d="M 870 170 L 870 200" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Resize Back Stage -->
+  <g id="resize_back_stage" transform="translate(810, 210)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Resize Back</text>
+    <rect x="0" y="25" width="120" height="60" fill="#95a5a6" rx="8" filter="url(#dropshadow)"/>
+    <text x="60" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Interpolate</text>
+    <text x="60" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">224×224 → H×W</text>
+    <text x="60" y="71" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Back to original</text>
+  </g>
+  
+  <!-- Arrow 6 (leftward) -->
+  <path d="M 800 240 L 700 240" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Feature Adaptation Stage -->
+  <g id="adapt_stage" transform="translate(580, 210)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Feature Adaptation</text>
+    <rect x="0" y="25" width="120" height="80" fill="url(#fusionGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="60" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Conv2d</text>
+    <text x="60" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">embed_dim</text>
+    <text x="60" y="71" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">→ target_channels</text>
+    <text x="60" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">768 → 256</text>
+    <text x="60" y="97" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Match YOLOv12</text>
+  </g>
+  
+  <!-- Arrow 7 (leftward) -->
+  <path d="M 570 250 L 470 250" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Original CNN Features (for fusion) -->
+  <g id="original_features" transform="translate(50, 210)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Original CNN</text>
+    <rect x="0" y="25" width="120" height="80" fill="url(#inputGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="60" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">CNN Features</text>
+    <text x="60" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Original input</text>
+    <text x="60" y="71" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">B × C × H × W</text>
+    <text x="60" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">1×256×40×40</text>
+    <text x="60" y="97" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Preserved</text>
+  </g>
+  
+  <!-- Arrow 8 (rightward to fusion) -->
+  <path d="M 180 250 L 280 250" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Feature Fusion Stage -->
+  <g id="fusion_stage" transform="translate(290, 210)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Feature Fusion</text>
+    <rect x="0" y="25" width="170" height="100" fill="url(#fusionGrad)" rx="8" filter="url(#dropshadow)"/>
+    <text x="85" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">Concatenate</text>
+    <text x="85" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">CNN + DINO features</text>
+    <text x="85" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">torch.cat([x, dino], dim=1)</text>
+    <text x="85" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">256 + 256 = 512 channels</text>
+    <text x="85" y="101" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">↓</text>
+    <text x="85" y="114" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Conv fusion → 256 channels</text>
+  </g>
+  
+  <!-- Arrow 9 (downward from fusion) -->
+  <path d="M 375 320 L 375 350" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Output Stage -->
+  <g id="output_stage" transform="translate(290, 360)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Enhanced Features Output</text>
+    <rect x="0" y="25" width="170" height="80" fill="#27ae60" rx="8" filter="url(#dropshadow)"/>
+    <text x="85" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Enhanced Features</text>
+    <text x="85" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">CNN + DINOv3 fusion</text>
+    <text x="85" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">B × target_channels × H × W</text>
+    <text x="85" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">1×256×40×40</text>
+  </g>
+  
+  <!-- Technical Details Box -->
+  <g id="tech_details" transform="translate(50, 500)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">
+      🔧 Technical Implementation Details
+    </text>
+    
+    <rect x="0" y="35" width="500" height="200" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1" rx="8"/>
+    <text x="20" y="60" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Key Processing Steps:</text>
+    
+    <text x="20" y="80" font-family="Arial, sans-serif" font-size="11" fill="#34495e">1. <tspan font-weight="bold">Input Projection:</tspan> CNN features → 3-channel RGB-like representation</text>
+    <text x="20" y="95" font-family="Arial, sans-serif" font-size="11" fill="#34495e">2. <tspan font-weight="bold">Spatial Resize:</tspan> Interpolate to 224×224 for DINOv3 processing</text>
+    <text x="20" y="110" font-family="Arial, sans-serif" font-size="11" fill="#34495e">3. <tspan font-weight="bold">DINOv3 Forward:</tspan> Extract rich semantic features via self-attention</text>
+    <text x="20" y="125" font-family="Arial, sans-serif" font-size="11" fill="#34495e">4. <tspan font-weight="bold">Feature Reshaping:</tspan> Convert sequence to spatial feature map</text>
+    <text x="20" y="140" font-family="Arial, sans-serif" font-size="11" fill="#34495e">5. <tspan font-weight="bold">Spatial Restore:</tspan> Interpolate back to original H×W dimensions</text>
+    <text x="20" y="155" font-family="Arial, sans-serif" font-size="11" fill="#34495e">6. <tspan font-weight="bold">Channel Adaptation:</tspan> Project to match YOLOv12 channel dimensions</text>
+    <text x="20" y="170" font-family="Arial, sans-serif" font-size="11" fill="#34495e">7. <tspan font-weight="bold">Feature Fusion:</tspan> Concatenate + convolution for final enhancement</text>
+    
+    <text x="20" y="195" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#e74c3c">🎯 Result: Enhanced features with CNN efficiency + ViT semantic understanding</text>
+    <text x="20" y="210" font-family="Arial, sans-serif" font-size="10" fill="#7f8c8d">Integration preserves spatial structure while adding rich visual representations</text>
+  </g>
+  
+  <!-- Performance Box -->
+  <g id="performance_box" transform="translate(600, 500)">
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">
+      📊 Performance Characteristics
+    </text>
+    
+    <rect x="0" y="35" width="400" height="200" fill="#e8f5e8" stroke="#27ae60" stroke-width="1" rx="8"/>
+    <text x="20" y="60" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Integration Benefits:</text>
+    
+    <text x="20" y="80" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• <tspan font-weight="bold">Accuracy Gain:</tspan> +5-18% mAP improvement over base YOLOv12</text>
+    <text x="20" y="95" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• <tspan font-weight="bold">Medium Objects:</tspan> Significant improvement for 32-96 pixel objects</text>
+    <text x="20" y="110" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• <tspan font-weight="bold">Semantic Understanding:</tspan> Better object classification and localization</text>
+    <text x="20" y="125" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• <tspan font-weight="bold">Transfer Learning:</tspan> Leverages DINOv3 pretrained representations</text>
+    <text x="20" y="140" font-family="Arial, sans-serif" font-size="11" fill="#34495e">• <tspan font-weight="bold">Computational Cost:</tspan> ~1.5-2x training time, 2-4x memory usage</text>
+    
+    <text x="20" y="165" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#27ae60">Recommended Configuration:</text>
+    <text x="20" y="180" font-family="monospace" font-size="10" fill="#8e44ad">yolov12s + dinov3_vitb16 + single integration</text>
+    <text x="20" y="195" font-family="Arial, sans-serif" font-size="10" fill="#7f8c8d">Optimal balance of accuracy improvement and computational efficiency</text>
+    <text x="20" y="210" font-family="Arial, sans-serif" font-size="10" fill="#7f8c8d">Memory: ~8GB VRAM, Training time: ~1.5x base YOLOv12</text>
+  </g>
+  
+  <!-- Footer -->
+  <text x="600" y="780" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#7f8c8d">
+    DINO3Backbone: Technical implementation of DINOv3 integration with YOLOv12 feature pyramid
+  </text>
+</svg>

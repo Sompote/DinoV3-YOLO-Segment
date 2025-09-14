@@ -1,0 +1,48 @@
+# YOLOv12s with DINOv3 Simple Integration - Working Version
+# Based on YOLOv13 successful patterns
+
+nc: 80  # number of classes
+scales: # model compound scaling constants
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024]   # Nano
+  s: [0.50, 0.50, 1024]   # Small
+  m: [0.67, 0.75, 768]    # Medium
+  l: [1.00, 1.00, 512]    # Large
+  x: [1.00, 1.25, 512]    # Extra Large
+
+backbone:
+  # [from, repeats, module, args]
+  # YOLOv12s backbone with DINOv3 integration at P4 level (following YOLOv13 pattern)
+  - [-1, 1, Conv, [32, 3, 2]]  # 0-P1/2
+  - [-1, 1, Conv, [64, 3, 2, 1, 2]] # 1-P2/4
+  - [-1, 1, C3k2, [128, False, 0.25]]
+  - [-1, 1, Conv, [128, 3, 2, 1, 4]] # 3-P3/8
+  - [-1, 1, C3k2, [256, False, 0.25]]
+  - [-1, 1, Conv, [256, 3, 2]] # 5-P4/16
+  - [-1, 2, A2C2f, [256, True, 4]]
+  
+  # DINOv3 enhancement at P4 level (256 channels maintained)
+  - [-1, 1, DINO3Backbone, ['dinov3_vitb16', True, 256]]  # 7: DINOv3 enhanced P4 
+  
+  - [-1, 1, Conv, [512, 3, 2]] # 8-P5/32
+  - [-1, 2, A2C2f, [512, True, 1]]
+
+# YOLOv12 head following base YOLOv12s structure
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 10
+  - [[-1, 7], 1, Concat, [1]] # cat backbone P4 (DINOv3-enhanced: 512+256=768)
+  - [-1, 1, A2C2f, [256, False, -1]] # 12
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 13
+  - [[-1, 4], 1, Concat, [1]] # cat backbone P3 (256+256=512) 
+  - [-1, 1, A2C2f, [128, False, -1]] # 15 (P3/8-small)
+
+  - [-1, 1, Conv, [128, 3, 2]] # 16
+  - [[-1, 12], 1, Concat, [1]] # cat head P4 (128+256=384)
+  - [-1, 1, A2C2f, [256, False, -1]] # 18 (P4/16-medium)
+
+  - [-1, 1, Conv, [256, 3, 2]] # 19
+  - [[-1, 9], 1, Concat, [1]] # cat head P5 (256+512=768)
+  - [-1, 1, C3k2, [512, True]] # 21 (P5/32-large)
+
+  - [[15, 18, 21], 1, Detect, [nc]] # Detect(P3, P4, P5)
