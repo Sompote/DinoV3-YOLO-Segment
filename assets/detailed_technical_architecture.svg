@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="2000" height="1400" viewBox="0 0 2000 1400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Enhanced Gradients -->
+    <linearGradient id="inputGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5dade2;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="convGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e67e22;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f39c12;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="c3k2Grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8e44ad;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9b59b6;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="a2c2fGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="dinoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2ecc71;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="vitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#16a085;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1abc9c;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="headGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#34495e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2c3e50;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2c3e50"/>
+    </marker>
+    
+    <marker id="dinoArrow" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+      <polygon points="0 0, 12 4.5, 0 9" fill="#27ae60"/>
+    </marker>
+    
+    <!-- Pattern for attention mechanism -->
+    <pattern id="attentionPattern" patternUnits="userSpaceOnUse" width="4" height="4">
+      <rect width="4" height="4" fill="#f39c12" opacity="0.3"/>
+      <circle cx="2" cy="2" r="1" fill="#e67e22"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="2000" height="1400" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="1000" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2c3e50">
+    YOLOv12 + DINOv3 Detailed Technical Architecture
+  </text>
+  <text x="1000" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#7f8c8d">
+    Internal Components, Data Flow, and Feature Processing Pipeline
+  </text>
+  
+  <!-- Main Architecture Section -->
+  <g id="main_architecture" transform="translate(50, 80)">
+    
+    <!-- Input Processing -->
+    <g id="input_section">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">Input Processing</text>
+      
+      <!-- Input Image -->
+      <rect x="0" y="25" width="100" height="70" fill="url(#inputGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="50" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">Input Image</text>
+      <text x="50" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">640×640×3</text>
+      <text x="50" y="71" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">RGB Channels</text>
+      <text x="50" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Batch: B</text>
+    </g>
+    
+    <!-- DINO Preprocessing (Optional) -->
+    <g id="dino_preprocessing" transform="translate(120, 0)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#16a085">DINO3 Preprocessor (P0)</text>
+      <rect x="0" y="25" width="140" height="70" fill="url(#vitGrad)" rx="6" filter="url(#dropshadow)" stroke="#16a085" stroke-width="2" stroke-dasharray="3,3"/>
+      
+      <!-- Internal components -->
+      <text x="70" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="white">DINOv3 Model</text>
+      <text x="70" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Vision Transformer</text>
+      <text x="70" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Self-Attention</text>
+      <text x="70" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Feature Enhancement</text>
+      <text x="70" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">3→3 channels</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M 110 60 L 120 60" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- YOLOv12 Backbone -->
+    <g id="yolo_backbone" transform="translate(280, 0)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">YOLOv12 Backbone Architecture</text>
+      
+      <!-- P1 Stage -->
+      <g id="p1_detailed" transform="translate(0, 25)">
+        <rect x="0" y="0" width="120" height="100" fill="url(#convGrad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P1 Stage</text>
+        <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Conv(3→64, k=3, s=2)</text>
+        <text x="60" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">320×320×64</text>
+        <text x="60" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• BatchNorm2d</text>
+        <text x="60" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• SiLU Activation</text>
+        <text x="60" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Downsampling</text>
+        <text x="60" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Feature Extraction</text>
+      </g>
+      
+      <!-- P2 Stage -->
+      <g id="p2_detailed" transform="translate(140, 25)">
+        <rect x="0" y="0" width="120" height="100" fill="url(#convGrad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P2 Stage</text>
+        <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Conv(64→128, k=3, s=2)</text>
+        <text x="60" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">160×160×128</text>
+        <text x="60" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Partial Conv</text>
+        <text x="60" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Group Conv</text>
+        <text x="60" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Efficient Design</text>
+        <text x="60" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• 1/4 Resolution</text>
+      </g>
+      
+      <!-- C3k2 Block (P2) -->
+      <g id="c3k2_p2" transform="translate(280, 25)">
+        <rect x="0" y="0" width="140" height="100" fill="url(#c3k2Grad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">C3k2 Block</text>
+        <text x="70" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">CSP Bottleneck</text>
+        <text x="70" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">128→256 channels</text>
+        <text x="70" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Split Channels</text>
+        <text x="70" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Bottleneck Layers</text>
+        <text x="70" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Skip Connection</text>
+        <text x="70" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Feature Fusion</text>
+      </g>
+      
+      <!-- P3 Stage -->
+      <g id="p3_detailed" transform="translate(440, 25)">
+        <rect x="0" y="0" width="120" height="100" fill="url(#convGrad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P3 Stage</text>
+        <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Conv(256→256, k=3, s=2)</text>
+        <text x="60" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">80×80×256</text>
+        <text x="60" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Small Objects</text>
+        <text x="60" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• High Resolution</text>
+        <text x="60" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Fine Details</text>
+        <text x="60" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• 1/8 Resolution</text>
+      </g>
+      
+      <!-- C3k2 Block (P3) -->
+      <g id="c3k2_p3" transform="translate(580, 25)">
+        <rect x="0" y="0" width="140" height="100" fill="url(#c3k2Grad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">C3k2 Block</text>
+        <text x="70" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">CSP Architecture</text>
+        <text x="70" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">256→512 channels</text>
+        <text x="70" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• n=2 Repeats</text>
+        <text x="70" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• e=0.25 Expansion</text>
+        <text x="70" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Efficient Design</text>
+        <text x="70" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Gradient Flow</text>
+      </g>
+      
+      <!-- P4 Stage -->
+      <g id="p4_detailed" transform="translate(740, 25)">
+        <rect x="0" y="0" width="120" height="100" fill="url(#convGrad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P4 Stage</text>
+        <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Conv(512→512, k=3, s=2)</text>
+        <text x="60" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">40×40×512</text>
+        <text x="60" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Medium Objects</text>
+        <text x="60" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Balanced Resolution</text>
+        <text x="60" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Rich Features</text>
+        <text x="60" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• 1/16 Resolution</text>
+      </g>
+      
+      <!-- A2C2f Block (P4) -->
+      <g id="a2c2f_p4" transform="translate(880, 25)">
+        <rect x="0" y="0" width="160" height="100" fill="url(#a2c2fGrad)" rx="6" filter="url(#dropshadow)"/>
+        <text x="80" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">A2C2f Block</text>
+        <text x="80" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Attention-Enhanced</text>
+        <text x="80" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">512→512 channels</text>
+        <text x="80" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Area Attention</text>
+        <text x="80" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• MLP Blocks</text>
+        <text x="80" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Residual Connection</text>
+        <text x="80" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• n=4 Repeats</text>
+      </g>
+      
+      <!-- Arrows between backbone stages -->
+      <path d="M 130 75 L 140 75" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 270 75 L 280 75" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 430 75 L 440 75" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 570 75 L 580 75" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 730 75 L 740 75" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <path d="M 870 75 L 880 75" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+    </g>
+    
+    <!-- Arrow from input to backbone -->
+    <path d="M 270 60 L 280 60" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- DINO Integration Section -->
+  <g id="dino_integration" transform="translate(50, 250)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#27ae60">DINO3 Integration Points</text>
+    
+    <!-- P3 DINO Integration (Dual Mode) -->
+    <g id="dino_p3_detail" transform="translate(720, 25)">
+      <rect x="0" y="0" width="160" height="120" fill="url(#dinoGrad)" rx="6" filter="url(#dropshadow)" stroke="#27ae60" stroke-width="2" stroke-dasharray="5,5"/>
+      <text x="80" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">🎪 DINO3 P3</text>
+      <text x="80" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Dual-Scale Mode</text>
+      <text x="80" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">80×80×256→256</text>
+      <text x="80" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Small Object Enhancement</text>
+      <text x="80" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Input Projection</text>
+      <text x="80" y="79" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• ViT Processing</text>
+      <text x="80" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Feature Fusion</text>
+      <text x="80" y="103" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Channel Adaptation</text>
+    </g>
+    
+    <!-- P4 DINO Integration -->
+    <g id="dino_p4_detail" transform="translate(1040, 25)">
+      <rect x="0" y="0" width="160" height="120" fill="url(#dinoGrad)" rx="6" filter="url(#dropshadow)" stroke="#27ae60" stroke-width="2"/>
+      <text x="80" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">⚡ DINO3 P4</text>
+      <text x="80" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Single/Dual Mode</text>
+      <text x="80" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">40×40×512→512</text>
+      <text x="80" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Medium Object Enhancement</text>
+      <text x="80" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• CNN→RGB Projection</text>
+      <text x="80" y="79" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• 224×224 Resize</text>
+      <text x="80" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Self-Attention</text>
+      <text x="80" y="103" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Spatial Restore</text>
+    </g>
+    
+    <!-- DINO Integration Arrows -->
+    <path d="M 720 100 L 720 145" stroke="#27ae60" stroke-width="2" stroke-dasharray="3,3" marker-end="url(#dinoArrow)"/>
+    <path d="M 1040 100 L 1040 145" stroke="#27ae60" stroke-width="2" marker-end="url(#dinoArrow)"/>
+  </g>
+  
+  <!-- DINO Internal Architecture -->
+  <g id="dino_internals" transform="translate(50, 420)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#16a085">DINOv3 Internal Architecture</text>
+    
+    <!-- DINO Processing Pipeline -->
+    <rect x="0" y="25" width="1800" height="180" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2" rx="10"/>
+    
+    <!-- Step 1: Input Projection -->
+    <g id="dino_step1" transform="translate(20, 45)">
+      <rect x="0" y="0" width="140" height="140" fill="url(#vitGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">1. Input Projection</text>
+      <text x="70" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">CNN Features → RGB</text>
+      <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Conv2d(C, 3, 1)</text>
+      <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Channel Reduction</text>
+      <text x="70" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Pseudo RGB Creation</text>
+      <text x="70" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Spatial Preservation</text>
+      <text x="70" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,C,H,W]</text>
+      <text x="70" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,3,H,W]</text>
+      <text x="70" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">e.g. [1,512,40,40]→[1,3,40,40]</text>
+    </g>
+    
+    <!-- Step 2: Spatial Resize -->
+    <g id="dino_step2" transform="translate(180, 45)">
+      <rect x="0" y="0" width="140" height="140" fill="#95a5a6" rx="6" filter="url(#dropshadow)"/>
+      <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">2. Spatial Resize</text>
+      <text x="70" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Bilinear Interpolation</text>
+      <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">→ 224×224</text>
+      <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• DINOv3 Input Size</text>
+      <text x="70" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Maintains Aspect Ratio</text>
+      <text x="70" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Smooth Interpolation</text>
+      <text x="70" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,3,H,W]</text>
+      <text x="70" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,3,224,224]</text>
+      <text x="70" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">e.g. [1,3,40,40]→[1,3,224,224]</text>
+    </g>
+    
+    <!-- Step 3: Vision Transformer -->
+    <g id="dino_step3" transform="translate(340, 45)">
+      <rect x="0" y="0" width="160" height="140" fill="url(#dinoGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="80" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">3. Vision Transformer</text>
+      <text x="80" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">DINOv3 Model</text>
+      <text x="80" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Self-Attention Layers</text>
+      <text x="80" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Patch Embedding</text>
+      <text x="80" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Multi-Head Attention</text>
+      <text x="80" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Feed-Forward Network</text>
+      <text x="80" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,3,224,224]</text>
+      <text x="80" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,257,768]</text>
+      <text x="80" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">CLS + 256 patches</text>
+    </g>
+    
+    <!-- Step 4: Feature Extraction -->
+    <g id="dino_step4" transform="translate(520, 45)">
+      <rect x="0" y="0" width="140" height="140" fill="url(#vitGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">4. Feature Extraction</text>
+      <text x="70" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Spatial Reconstruction</text>
+      <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Remove CLS Token</text>
+      <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Patch Tokens Only</text>
+      <text x="70" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Reshape to 2D</text>
+      <text x="70" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Spatial Structure</text>
+      <text x="70" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,257,768]</text>
+      <text x="70" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,768,16,16]</text>
+      <text x="70" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">16×16 patch grid</text>
+    </g>
+    
+    <!-- Step 5: Spatial Restore -->
+    <g id="dino_step5" transform="translate(680, 45)">
+      <rect x="0" y="0" width="140" height="140" fill="#95a5a6" rx="6" filter="url(#dropshadow)"/>
+      <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">5. Spatial Restore</text>
+      <text x="70" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Resize Back</text>
+      <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Bilinear Interpolation</text>
+      <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Original Dimensions</text>
+      <text x="70" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Preserve Features</text>
+      <text x="70" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Smooth Transition</text>
+      <text x="70" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,768,16,16]</text>
+      <text x="70" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,768,H,W]</text>
+      <text x="70" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">e.g. [1,768,16,16]→[1,768,40,40]</text>
+    </g>
+    
+    <!-- Step 6: Channel Adaptation -->
+    <g id="dino_step6" transform="translate(840, 45)">
+      <rect x="0" y="0" width="140" height="140" fill="url(#vitGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">6. Channel Adapt</text>
+      <text x="70" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Feature Adapter</text>
+      <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Linear Projection</text>
+      <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Match YOLOv12</text>
+      <text x="70" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Channel Alignment</text>
+      <text x="70" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Learnable Weights</text>
+      <text x="70" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,768,H,W]</text>
+      <text x="70" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,C_target,H,W]</text>
+      <text x="70" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">e.g. [1,768,40,40]→[1,512,40,40]</text>
+    </g>
+    
+    <!-- Step 7: Feature Fusion -->
+    <g id="dino_step7" transform="translate(1000, 45)">
+      <rect x="0" y="0" width="140" height="140" fill="url(#a2c2fGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="70" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">7. Feature Fusion</text>
+      <text x="70" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Concatenate &amp; Fuse</text>
+      <text x="70" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">CNN + DINO</text>
+      <text x="70" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• torch.cat(dim=1)</text>
+      <text x="70" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Fusion Conv</text>
+      <text x="70" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Enhanced Features</text>
+      <text x="70" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Input: [B,C+C,H,W]</text>
+      <text x="70" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Output: [B,C,H,W]</text>
+      <text x="70" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">e.g. [1,1024,40,40]→[1,512,40,40]</text>
+    </g>
+    
+    <!-- Processing arrows -->
+    <path d="M 170 115 L 180 115" stroke="#16a085" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 330 115 L 340 115" stroke="#16a085" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 510 115 L 520 115" stroke="#16a085" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 670 115 L 680 115" stroke="#16a085" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 830 115 L 840 115" stroke="#16a085" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 990 115 L 1000 115" stroke="#16a085" stroke-width="2" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- YOLOv12 Head Architecture -->
+  <g id="yolo_head" transform="translate(50, 650)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">YOLOv12 Head Architecture - Feature Pyramid Network</text>
+    
+    <!-- Head processing pipeline -->
+    <rect x="0" y="25" width="1800" height="160" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2" rx="10"/>
+    
+    <!-- P5 Processing -->
+    <g id="head_p5" transform="translate(20, 45)">
+      <rect x="0" y="0" width="120" height="120" fill="url(#headGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P5 Head</text>
+      <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">20×20×512</text>
+      <text x="60" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Large Objects</text>
+      <text x="60" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Upsample</text>
+      <text x="60" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Concat with P4</text>
+      <text x="60" y="79" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• A2C2f Processing</text>
+      <text x="60" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Feature Refinement</text>
+      <text x="60" y="103" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Detection Head</text>
+    </g>
+    
+    <!-- P4 Processing -->
+    <g id="head_p4" transform="translate(160, 45)">
+      <rect x="0" y="0" width="120" height="120" fill="url(#headGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P4 Head</text>
+      <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">40×40×256</text>
+      <text x="60" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Medium Objects</text>
+      <text x="60" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Enhanced by DINO</text>
+      <text x="60" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Upsample</text>
+      <text x="60" y="79" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Concat with P3</text>
+      <text x="60" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Multi-scale Fusion</text>
+      <text x="60" y="103" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Detection Head</text>
+    </g>
+    
+    <!-- P3 Processing -->
+    <g id="head_p3" transform="translate(300, 45)">
+      <rect x="0" y="0" width="120" height="120" fill="url(#headGrad)" rx="6" filter="url(#dropshadow)"/>
+      <text x="60" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">P3 Head</text>
+      <text x="60" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">80×80×128</text>
+      <text x="60" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Small Objects</text>
+      <text x="60" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Enhanced by DINO</text>
+      <text x="60" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• High Resolution</text>
+      <text x="60" y="79" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Fine-grained Features</text>
+      <text x="60" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Small Object Focus</text>
+      <text x="60" y="103" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Detection Head</text>
+    </g>
+    
+    <!-- Detection Heads -->
+    <g id="detection_heads" transform="translate(440, 45)">
+      <rect x="0" y="0" width="160" height="120" fill="#27ae60" rx="6" filter="url(#dropshadow)"/>
+      <text x="80" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">Detection Heads</text>
+      <text x="80" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Multi-Scale Detection</text>
+      <text x="80" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">3 Output Levels</text>
+      <text x="80" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Bounding Box Regression</text>
+      <text x="80" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Classification Scores</text>
+      <text x="80" y="79" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Confidence Prediction</text>
+      <text x="80" y="91" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• Anchor-free Design</text>
+      <text x="80" y="103" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">• DFL Loss Function</text>
+    </g>
+    
+    <!-- Head arrows -->
+    <path d="M 150 105 L 160 105" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 290 105 L 300 105" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <path d="M 430 105 L 440 105" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- Technical Specifications -->
+  <g id="tech_specs" transform="translate(50, 860)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">Technical Specifications &amp; Performance Metrics</text>
+    
+    <!-- Specifications table -->
+    <rect x="0" y="25" width="1800" height="200" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="8"/>
+    
+    <!-- YOLOv12 Components -->
+    <g id="yolo_specs" transform="translate(20, 45)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#e67e22">YOLOv12 Components:</text>
+      <text x="0" y="32" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Conv:</tspan> 3×3 Convolution + BatchNorm + SiLU</text>
+      <text x="0" y="45" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">C3k2:</tspan> CSP Bottleneck with 2 convolutions, n repeats</text>
+      <text x="0" y="58" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">A2C2f:</tspan> Attention-enhanced C2f with area attention</text>
+      <text x="0" y="71" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Bottleneck:</tspan> Residual block with 3×3 convolutions</text>
+      <text x="0" y="84" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">ABlock:</tspan> Attention block with MLP, area=1, mlp_ratio=2.0</text>
+      <text x="0" y="97" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Detect:</tspan> Anchor-free detection head with DFL loss</text>
+      <text x="0" y="110" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">FPN:</tspan> Feature Pyramid Network for multi-scale detection</text>
+      <text x="0" y="123" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Scaling:</tspan> Depth, Width, Max_channels scaling factors</text>
+    </g>
+    
+    <!-- DINO Components -->
+    <g id="dino_specs" transform="translate(450, 45)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#27ae60">DINOv3 Components:</text>
+      <text x="0" y="32" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">ViT-B/16:</tspan> 86M params, 768 embed_dim, 12 layers</text>
+      <text x="0" y="45" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Patch Size:</tspan> 16×16 pixels, 14×14 patches (224×224)</text>
+      <text x="0" y="58" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Self-Attention:</tspan> Multi-head attention, 12 heads</text>
+      <text x="0" y="71" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">MLP:</tspan> Feed-forward network, 4x expansion ratio</text>
+      <text x="0" y="84" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">CLS Token:</tspan> Classification token for global features</text>
+      <text x="0" y="97" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Positional Encoding:</tspan> Learnable position embeddings</text>
+      <text x="0" y="110" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Layer Norm:</tspan> Pre-normalization architecture</text>
+      <text x="0" y="123" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Pretrained:</tspan> Self-supervised on ImageNet-22k</text>
+    </g>
+    
+    <!-- Integration Details -->
+    <g id="integration_specs" transform="translate(900, 45)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#8e44ad">Integration Details:</text>
+      <text x="0" y="32" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">P3 Integration:</tspan> 80×80×256, small objects, dual-scale</text>
+      <text x="0" y="45" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">P4 Integration:</tspan> 40×40×256/512, medium objects, single/dual</text>
+      <text x="0" y="58" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Channel Mapping:</tspan> Automatic scaling based on YOLO size</text>
+      <text x="0" y="71" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Fusion Method:</tspan> Concatenation + 1×1 convolution</text>
+      <text x="0" y="84" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Gradient Flow:</tspan> Optional DINO backbone freezing</text>
+      <text x="0" y="97" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Memory Usage:</tspan> 4-16GB VRAM depending on model size</text>
+      <text x="0" y="110" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Training Time:</tspan> 1.1-2x longer than base YOLOv12</text>
+      <text x="0" y="123" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Performance:</tspan> +5-18% mAP improvement</text>
+    </g>
+    
+    <!-- Performance Metrics -->
+    <g id="performance_specs" transform="translate(1350, 45)">
+      <text x="0" y="15" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#e74c3c">Performance Metrics:</text>
+      <text x="0" y="32" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Base YOLOv12s:</tspan> 47.6% mAP, 2.42ms, 9.1M params</text>
+      <text x="0" y="45" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">+ DINO Single:</tspan> +7-12% mAP, 1.5x slower</text>
+      <text x="0" y="58" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">+ DINO Dual:</tspan> +10-18% mAP, 2x slower</text>
+      <text x="0" y="71" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Small Objects:</tspan> +8-15% improvement with dual</text>
+      <text x="0" y="84" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Medium Objects:</tspan> +5-12% improvement with single</text>
+      <text x="0" y="97" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Training Epochs:</tspan> 100-200 (vs 600 base YOLO)</text>
+      <text x="0" y="110" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Batch Size:</tspan> 8-32 (vs 64-256 base YOLO)</text>
+      <text x="0" y="123" font-family="Arial, sans-serif" font-size="11" fill="#2c3e50">• <tspan font-weight="bold">Convergence:</tspan> Faster due to pretrained features</text>
+    </g>
+  </g>
+  
+  <!-- Data Flow Indicators -->
+  <g id="data_flow_indicators" transform="translate(50, 1100)">
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">Data Flow &amp; Tensor Shapes</text>
+    
+    <!-- Flow indicators -->
+    <rect x="0" y="25" width="1800" height="80" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1" rx="8"/>
+    
+    <!-- Tensor shape examples -->
+    <g id="tensor_shapes" font-family="Monaco, monospace" font-size="10" fill="#2c3e50">
+      <text x="20" y="45" fill="#3498db" font-weight="bold">Input:</text>
+      <text x="70" y="45">[B, 3, 640, 640] → Conv → [B, 64, 320, 320] → Conv → [B, 128, 160, 160]</text>
+      
+      <text x="20" y="60" fill="#8e44ad" font-weight="bold">P3:</text>
+      <text x="70" y="60">[B, 256, 80, 80] → DINO3 → [B, 256, 80, 80] (Enhanced)</text>
+      
+      <text x="20" y="75" fill="#e74c3c" font-weight="bold">P4:</text>
+      <text x="70" y="75">[B, 512, 40, 40] → DINO3 → [B, 512, 40, 40] (Enhanced)</text>
+      
+      <text x="20" y="90" fill="#27ae60" font-weight="bold">Output:</text>
+      <text x="70" y="90">P3: [B, 128, 80, 80], P4: [B, 256, 40, 40], P5: [B, 512, 20, 20] → Detection</text>
+    </g>
+  </g>
+  
+  <!-- Footer -->
+  <text x="1000" y="1350" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#7f8c8d">
+    YOLOv12 + DINOv3: Detailed Technical Architecture with Internal Components and Processing Pipeline
+  </text>
+  <text x="1000" y="1370" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#95a5a6">
+    AI Research Group, Department of Civil Engineering, KMUTT | Systematic Vision Transformer Integration
+  </text>
+</svg>
