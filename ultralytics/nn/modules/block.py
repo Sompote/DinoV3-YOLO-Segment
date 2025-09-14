@@ -1550,10 +1550,8 @@ class DINO3Backbone(nn.Module):
             # Update embedding dimension
             self.embed_dim = actual_embed_dim
             
-            # Create projection layers with correct embedding dimension
-            if not hasattr(self, 'feature_adapter') or self.feature_adapter is None:
-                print(f"   Creating projection layers with embed_dim: {self.embed_dim}")
-                self._create_projection_layers(self.input_channels)
+            # Note: Projection layers will be created dynamically in forward pass
+            print(f"   Projection layers will be created dynamically based on input shape")
             
             return model
             
