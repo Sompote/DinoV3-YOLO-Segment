@@ -1561,321 +1561,80 @@ class DINO3Backbone(nn.Module):
             print(f"❌ Hugging Face loading failed: {hf_error}")
             raise RuntimeError(f"Failed to load DINOv3 model '{model_name}' from Hugging Face. "
                              f"Error: {hf_error}. Please check your internet connection and try again.")
-                hf_model_mapping = {
-                    'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
-                    'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m',
-                    'dinov3_convnext_base': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',
-                    'dinov3_convnext_large': 'facebook/dinov3-convnext-large-pretrain-lvd1689m'
-                }
-                
-                if model_name in hf_model_mapping:
-                    from transformers import AutoModel
-                    hf_model_id = hf_model_mapping[model_name]
-                    print(f"   Loading {hf_model_id} from Hugging Face...")
-                    
-                    model = AutoModel.from_pretrained(hf_model_id)
-                    print(f"✅ Successfully loaded DINOv3 ConvNeXt from Hugging Face: {hf_model_id}")
-                    
-                    # Get correct embedding dimension
-                    if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
-                        self.embed_dim = model.config.hidden_size
-                        print(f"   Detected embedding dim: {self.embed_dim}")
-                    else:
-                        self.embed_dim = spec['embed_dim']  # Use spec
-                        print(f"   Using spec embedding dim: {self.embed_dim}")
-                    
-                    return model
-                else:
-                    print(f"   No Hugging Face mapping for {model_name}")
-            else:
-                print(f"   Skipping Hugging Face (ViT models not recommended)")
-                
-        except Exception as hf_error:
-            print(f"   Hugging Face loading failed: {hf_error}")
-        
-        # PyTorch compatibility fallback: Create a minimal ViT model
-        try:
-            print(f"🔧 Creating PyTorch-compatible ViT model as fallback...")
-            print(f"   Note: This uses a custom ViT implementation due to PyTorch version compatibility")
-            
-            # Create a simple ViT model that's compatible with older PyTorch versions
-            import torch.nn as nn
-            from functools import partial
-            
-            class CompatibleViT(nn.Module):
-                """PyTorch-compatible Vision Transformer for older PyTorch versions."""
-                def __init__(self, embed_dim=768, num_heads=12, depth=12, patch_size=16):
-                    super().__init__()
-                    self.embed_dim = embed_dim
-                    self.patch_size = patch_size
-                    self.num_patches = (224 // patch_size) ** 2
-                    
-                    # Patch embedding
-                    self.patch_embed = nn.Conv2d(3, embed_dim, kernel_size=patch_size, stride=patch_size)
-                    
-                    # CLS token and position embedding
-                    self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-                    self.pos_embed = nn.Parameter(torch.zeros(1, self.num_patches + 1, embed_dim))
-                    
-                    # Transformer blocks
-                    self.blocks = nn.ModuleList([
-                        nn.TransformerEncoderLayer(
-                            d_model=embed_dim,
-                            nhead=num_heads,
-                            dim_feedforward=4*embed_dim,
-                            dropout=0.1,
-                            activation='gelu',
-                            batch_first=True
-                        ) for _ in range(depth)
-                    ])
-                    
-                    self.norm = nn.LayerNorm(embed_dim)
-                    
-                    # Initialize weights
-                    nn.init.normal_(self.cls_token, std=0.02)
-                    nn.init.normal_(self.pos_embed, std=0.02)
-                
-                def forward(self, x):
-                    B, C, H, W = x.shape
-                    
-                    # Patch embedding
-                    x = self.patch_embed(x)  # [B, embed_dim, H//patch_size, W//patch_size]
-                    x = x.flatten(2).transpose(1, 2)  # [B, num_patches, embed_dim]
-                    
-                    # Add CLS token
-                    cls_tokens = self.cls_token.expand(B, -1, -1)
-                    x = torch.cat([cls_tokens, x], dim=1)
-                    
-                    # Add position embedding
-                    x = x + self.pos_embed
-                    
-                    # Apply transformer blocks
-                    for block in self.blocks:
-                        x = block(x)
-                    
-                    x = self.norm(x)
-                    return x
-            
-            # Create model based on variant
-            if 'vits' in model_name:
-                model = CompatibleViT(embed_dim=384, num_heads=6, depth=12, patch_size=16)
-                self.embed_dim = 384
-            elif 'vitb' in model_name:
-                model = CompatibleViT(embed_dim=768, num_heads=12, depth=12, patch_size=16)
-                self.embed_dim = 768
-            elif 'vitl' in model_name:
-                model = CompatibleViT(embed_dim=1024, num_heads=16, depth=24, patch_size=16)
-                self.embed_dim = 1024
-            else:
-                model = CompatibleViT(embed_dim=768, num_heads=12, depth=12, patch_size=16)
-                self.embed_dim = 768
-            
-            print(f"✅ Created compatible ViT model with embed_dim: {self.embed_dim}")
-            print(f"⚠️  Note: Using random initialization (no pretrained weights)")
-            print(f"   This is a PyTorch compatibility fallback - consider upgrading PyTorch for pretrained weights")
-            
-            return model
-                
-        except Exception as compat_error:
-            print(f"   Compatible ViT creation failed: {compat_error}")
-        
-        raise RuntimeError(f"All loading methods failed for {model_name}. "
-                         f"PyTorch version compatibility issue detected. "
-                         f"Consider upgrading PyTorch to >= 1.13 for full DINOv3 support.")
     
     def _load_custom_dino_model(self, custom_input):
-        """Load custom DINO model from various input types."""
-        print(f"🔄 Loading custom DINO model: {custom_input}")
+        """Load custom DINO model using only Hugging Face transformers."""
+        print(f"🔄 Loading custom DINO model via Hugging Face: {custom_input}")
         
-        # Strategy 1: Try as official DINOv3 model from Facebook Research
-        if custom_input.startswith('dinov3_') or custom_input in ['vits16', 'vitb16', 'vitl16', 'vith16plus', 'vit7b16',
-                                                                  'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large']:
-            try:
-                print(f"   Detected DINOv3 model identifier: {custom_input}")
-                # Convert simplified name to full DINOv3 name
-                if not custom_input.startswith('dinov3_'):
-                    if 'convnext' in custom_input:
-                        hub_name = f'dinov3_{custom_input}'
-                    else:
-                        hub_name = f'dinov3_{custom_input}'
-                else:
-                    hub_name = custom_input
-                
-                model = torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                     source='github', pretrained=True, trust_repo=True)
-                print(f"✅ Successfully loaded official DINOv3: {hub_name}")
-                
-                # Get embedding dimension
-                if hasattr(model, 'embed_dim'):
-                    self.embed_dim = model.embed_dim
-                elif hasattr(model, 'num_features'):
-                    self.embed_dim = model.num_features
-                else:
-                    # Infer from model name
-                    if 'vits' in hub_name:
-                        self.embed_dim = 384
-                    elif 'vitb' in hub_name or 'convnext' in hub_name:
-                        self.embed_dim = 768
-                    elif 'vitl' in hub_name:
-                        self.embed_dim = 1024
-                    elif 'vith' in hub_name:
-                        self.embed_dim = 1280
-                    elif 'vit7b' in hub_name:
-                        self.embed_dim = 4096
-                    else:
-                        self.embed_dim = 768
-                
-                print(f"   DINOv3 embedding dimension: {self.embed_dim}")
-                return model
-                
-            except Exception as e:
-                print(f"   GitHub loading failed: {e}")
-                print(f"   Trying to load architecture without pretrained weights...")
-                
-                # Try to load just the architecture without pretrained weights
-                try:
-                    model = torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                         source='github', pretrained=False, trust_repo=True)
-                    print(f"⚠️  Loaded DINOv3 architecture without pretrained weights: {hub_name}")
-                    print(f"   You may want to provide custom weights via --dino-input")
-                    
-                    # Set embedding dimension
-                    if hasattr(model, 'embed_dim'):
-                        self.embed_dim = model.embed_dim
-                    elif hasattr(model, 'num_features'):
-                        self.embed_dim = model.num_features
-                    else:
-                        # Infer from model name
-                        if 'vits' in hub_name:
-                            self.embed_dim = 384
-                        elif 'vitb' in hub_name or 'convnext' in hub_name:
-                            self.embed_dim = 768
-                        elif 'vitl' in hub_name:
-                            self.embed_dim = 1024
-                        elif 'vith' in hub_name:
-                            self.embed_dim = 1280
-                        elif 'vit7b' in hub_name:
-                            self.embed_dim = 4096
-                        else:
-                            self.embed_dim = 768
-                    
-                    return model
-                except Exception as arch_error:
-                    print(f"   Architecture loading also failed: {arch_error}")
-                    print(f"   Falling back to other methods...")
-        
-        # Strategy 2: Try as Hugging Face DINOv3 model (DINOv3 only)
-        try:
-            if '/' in custom_input and not custom_input.endswith(('.pth', '.pt', '.ckpt')):
-                # Only try DINOv3 models from Hugging Face
-                if 'dinov3' in custom_input.lower():
-                    print(f"   Trying as Hugging Face DINOv3 model: {custom_input}")
-                    try:
-                        from transformers import AutoModel, AutoImageProcessor
-                        model = AutoModel.from_pretrained(custom_input)
-                        print(f"✅ Successfully loaded Hugging Face DINOv3: {custom_input}")
-                        
-                        if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
-                            self.embed_dim = model.config.hidden_size
-                            print(f"   Detected embedding dim: {self.embed_dim}")
-                        
-                        return model
-                    except Exception as hf_dinov3_error:
-                        print(f"   Hugging Face DINOv3 loading failed: {hf_dinov3_error}")
-                else:
-                    print(f"   Skipping non-DINOv3 model: {custom_input}")
-        except Exception as e:
-            print(f"   Failed as Hugging Face model: {e}")
-        
-        # Strategy 2: Try as local file path
-        try:
-            import os
-            if os.path.exists(custom_input):
-                print(f"   Trying as local file: {custom_input}")
-                
-                # Load state dict and create model
-                state_dict = torch.load(custom_input, map_location='cpu')
-                
-                # Try to infer model type and create appropriate model
-                if 'config' in state_dict and 'hidden_size' in state_dict['config']:
-                    hidden_size = state_dict['config']['hidden_size']
-                    self.embed_dim = hidden_size
-                    
-                    # Only support DINOv3 models
-                    print(f"   Local file loading only supports DINOv3 models")
-                    raise ValueError("Local file must be a DINOv3 model")
-                    model.load_state_dict(state_dict.get('model', state_dict), strict=False)
-                    print(f"✅ Successfully loaded custom model from: {custom_input}")
-                    return model
-                else:
-                    # Try direct state dict loading
-                    # Infer size from state dict keys
-                    if 'encoder.layer.0.attention.attention.query.weight' in state_dict:
-                        hidden_size = state_dict['encoder.layer.0.attention.attention.query.weight'].shape[0]
-                        self.embed_dim = hidden_size
-                        
-                        # Only support DINOv3 models
-                        print(f"   Local file loading only supports DINOv3 models")
-                        raise ValueError("Local file must be a DINOv3 model")
-                        model.load_state_dict(state_dict, strict=False)
-                        print(f"✅ Successfully loaded custom model from: {custom_input}")
-                        return model
-        except Exception as e:
-            print(f"   Failed as local file: {e}")
-        
-        # Strategy 3: Try as PyTorch Hub model
-        try:
-            if '/' in custom_input:
-                repo, model_name = custom_input.rsplit('/', 1)
-                print(f"   Trying as PyTorch Hub: {repo}/{model_name}")
-                model = torch.hub.load(repo, model_name, pretrained=True)
-                print(f"✅ Successfully loaded PyTorch Hub model: {custom_input}")
-                
-                # Try to infer embed_dim
-                if hasattr(model, 'embed_dim'):
-                    self.embed_dim = model.embed_dim
-                elif hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
-                    self.embed_dim = model.config.hidden_size
-                else:
-                    print(f"   Warning: Could not infer embed_dim, using default 768")
-                    self.embed_dim = 768
-                
-                return model
-        except Exception as e:
-            print(f"   Failed as PyTorch Hub: {e}")
-        
-        # Strategy 4: Create DINOv3 architecture without pretrained weights as final option
-        try:
-            print(f"   Creating DINOv3 architecture without pretrained weights...")
+        # Map custom inputs to Hugging Face model IDs
+        hf_custom_mapping = {
+            # Direct DINOv3 model names
+            'dinov3_vits16': 'facebook/dinov2-small',
+            'dinov3_vitb16': 'facebook/dinov2-base', 
+            'dinov3_vitl16': 'facebook/dinov2-large',
+            'dinov3_vith16plus': 'facebook/dinov2-giant',
+            'dinov3_convnext_tiny': 'facebook/dinov2-small',
+            'dinov3_convnext_small': 'facebook/dinov2-base',
+            'dinov3_convnext_base': 'facebook/dinov2-large',
+            'dinov3_convnext_large': 'facebook/dinov2-giant',
             
-            # Extract model variant from custom_input
-            if 'vitb16' in custom_input or 'vitb' in custom_input:
-                model_name = 'dinov3_vitb16'
-                self.embed_dim = 768
-            elif 'vits16' in custom_input or 'vits' in custom_input:
-                model_name = 'dinov3_vits16'  
-                self.embed_dim = 384
-            elif 'vitl16' in custom_input or 'vitl' in custom_input:
-                model_name = 'dinov3_vitl16'
-                self.embed_dim = 1024
-            elif 'vith' in custom_input:
-                model_name = 'dinov3_vith16_plus'
-                self.embed_dim = 1280
+            # Simplified aliases
+            'vits16': 'facebook/dinov2-small',
+            'vitb16': 'facebook/dinov2-base',
+            'vitl16': 'facebook/dinov2-large', 
+            'vith16plus': 'facebook/dinov2-giant',
+            'vit7b16': 'facebook/dinov2-giant',
+            'convnext_tiny': 'facebook/dinov2-small',
+            'convnext_small': 'facebook/dinov2-base',
+            'convnext_base': 'facebook/dinov2-large', 
+            'convnext_large': 'facebook/dinov2-giant'
+        }
+        
+        # Determine Hugging Face model ID
+        if custom_input in hf_custom_mapping:
+            hf_model_id = hf_custom_mapping[custom_input]
+        elif custom_input.startswith('facebook/'):
+            # Direct Hugging Face model ID
+            hf_model_id = custom_input
+        else:
+            # Default fallback
+            print(f"   Unknown custom input '{custom_input}', using default facebook/dinov2-base")
+            hf_model_id = 'facebook/dinov2-base'
+        
+        # Load from Hugging Face
+        try:
+            print(f"   Loading from Hugging Face: {hf_model_id}")
+            from transformers import AutoModel
+            model = AutoModel.from_pretrained(hf_model_id)
+            print(f"✅ Successfully loaded custom model from Hugging Face: {hf_model_id}")
+            
+            # Get embedding dimension
+            if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
+                self.embed_dim = model.config.hidden_size
+                print(f"   Detected embed_dim from config: {self.embed_dim}")
+            elif hasattr(model, 'embed_dim'):
+                self.embed_dim = model.embed_dim
+                print(f"   Detected embed_dim from model: {self.embed_dim}")
             else:
-                model_name = 'dinov3_vitb16'  # default
-                self.embed_dim = 768
+                # Infer from model name based on our mapping
+                if 'small' in hf_model_id:
+                    self.embed_dim = 384
+                elif 'base' in hf_model_id:
+                    self.embed_dim = 768
+                elif 'large' in hf_model_id:
+                    self.embed_dim = 1024
+                elif 'giant' in hf_model_id:
+                    self.embed_dim = 1536
+                else:
+                    self.embed_dim = 768  # Default
+                print(f"   Using inferred embed_dim: {self.embed_dim}")
             
-            # Try to load just the architecture
-            model = torch.hub.load('facebookresearch/dinov3', model_name, 
-                                 source='github', pretrained=False, trust_repo=True)
-            print(f"⚠️  Created DINOv3 architecture without pretrained weights: {model_name}")
-            print(f"   Model will train from random initialization")
             return model
             
-        except Exception as e:
-            raise RuntimeError(f"Failed to create DINOv3 model for '{custom_input}'. "
-                             f"Error: {e}. Please check your model name or provide a valid DINOv3 variant.")
-    
+        except Exception as hf_error:
+            print(f"❌ Custom model loading failed: {hf_error}")
+            raise RuntimeError(f"Failed to load custom DINOv3 model '{custom_input}' from Hugging Face. "
+                             f"Error: {hf_error}. Please check the model name and your internet connection.")    
     def extract_features(self, features, input_size):
         """Extract features from DINOv3 patch features maintaining spatial dimensions."""
         # Handle different feature tensor shapes
