@@ -242,13 +242,18 @@ python train_yolov12_dino.py \
     --batch-size 16 \
     --name high_performance_dual
 
-# High-performance official DINOv3
+# High-performance official DINOv3 (p0+p3+p4)
 python train_yolov12_dino.py \
-    --data coco.yaml \
+      --data coco\
     --yolo-size l \
-    --dino-input dinov3_vitl16 \
+    --dino-version 3 \
+    --dino-input vitb16 \
+    --dino-variant vitb16 \
     --integration dual \
-    --epochs 200
+    --epochs 100 \
+    --batch-size 16 \
+    --name high_performance_dual_withp0
+  
 ```
 
 ### 📋 **Command Summary**
@@ -270,14 +275,14 @@ python train_yolov12_dino.py \
     --data coco.yaml \
     --yolo-size s \
     --dino-version 3 \
-    --dino-input dinov3_vitb16 \
+    --dino-input vitb16 \
     --epochs 100
 
 # High-performance official DINOv3
 python train_yolov12_dino.py \
     --data coco.yaml \
     --yolo-size l \
-    --dino-input dinov3_vitl16 \
+    --dino-input vitb16 \
     --integration dual \
     --epochs 200
 
@@ -292,7 +297,7 @@ python train_yolov12_dino.py \
 python train_yolov12_dino.py \
     --data coco.yaml \
     --yolo-size l \
-    --dino-input dinov3_vitb16 \
+    --dino-input vitb16 \
     --freeze-dino \
     --epochs 100
 ```
