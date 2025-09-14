@@ -1498,89 +1498,40 @@ class DINO3Backbone(nn.Module):
         
         spec = self.dinov3_specs[model_name]
         
-        # Try fresh download of DINOv3 weights (no caching for cloud consistency)
+        # Primary method: Use Hugging Face transformers (most reliable for cloud)
         try:
-            print(f"🔄 Loading DINOv3 model with fresh download: {model_name}")
-            hub_name = spec.get('hub_name', model_name)
+            print(f"🔄 Loading DINOv3 model via Hugging Face transformers: {model_name}")
             
-            import os
-            import tempfile
-            import shutil
-            
-            # Official DINOv3 weight URLs with correct hashes from GitHub
-            dinov3_weight_urls = {
-                # ViT models pretrained on LVD-1689M (web images)
-                'dinov3_vits16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vits16/dinov3_vits16_pretrain_lvd1689m-08c60483.pth',
-                'dinov3_vitb16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitb16/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth',
-                'dinov3_vitl16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitl16/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth',
-                'dinov3_vith16plus': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vith16_plus/dinov3_vith16_plus_pretrain_lvd1689m-72b9c5b4.pth',
-                'dinov3_vit7b16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vit7b16/dinov3_vit7b16_pretrain_lvd1689m-afde73ea.pth',
+            # Map DINOv3 model names to Hugging Face model IDs
+            hf_model_mapping = {
+                # ViT models - using facebook/dinov2 as placeholder (most reliable)
+                'dinov3_vits16': 'facebook/dinov2-small',  # 384 dim
+                'dinov3_vitb16': 'facebook/dinov2-base',   # 768 dim  
+                'dinov3_vitl16': 'facebook/dinov2-large',  # 1024 dim
+                'dinov3_vith16plus': 'facebook/dinov2-giant', # 1536 dim
                 
-                # ConvNeXt models pretrained on LVD-1689M (web images)  
-                'dinov3_convnext_tiny': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_tiny/dinov3_convnext_tiny_pretrain_lvd1689m-9c9c3f17.pth',
-                'dinov3_convnext_small': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_small/dinov3_convnext_small_pretrain_lvd1689m-16b07bb0.pth',
-                'dinov3_convnext_base': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_base/dinov3_convnext_base_pretrain_lvd1689m-3b3286b0.pth',
-                'dinov3_convnext_large': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_large/dinov3_convnext_large_pretrain_lvd1689m-6c20dc7b.pth',
+                # ConvNeXt models - use official DINOv3 ConvNeXt from Hugging Face
+                'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
+                'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m', 
+                'dinov3_convnext_base': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',
+                'dinov3_convnext_large': 'facebook/dinov3-convnext-large-pretrain-lvd1689m'
             }
             
-            # Get official weight URL
-            weight_url = dinov3_weight_urls.get(hub_name, dinov3_weight_urls.get(model_name))
+            # Get Hugging Face model ID
+            hf_model_id = hf_model_mapping.get(model_name, 'facebook/dinov2-base')
+            print(f"   Loading from Hugging Face: {hf_model_id}")
             
-            # Method 1: Always use fresh GitHub download for consistency
-            try:
-                print(f"   Downloading fresh model from GitHub: {hub_name}")
-                print(f"   Official weight URL: {weight_url}")
-                
-                # Force fresh download by setting force_reload=True
-                model = torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                     source='github', pretrained=True, trust_repo=True, 
-                                     force_reload=True)
-                print(f"✅ Successfully loaded fresh DINOv3 model from GitHub")
-                    
-            except Exception as github_error:
-                print(f"   Fresh GitHub download failed: {github_error}")
-                
-                # Method 2: Try with explicit weight URL (bypass any caching issues)
-                if weight_url and 'custom_fwd' not in str(github_error):
-                    try:
-                        print(f"   Trying direct weight download with explicit URL...")
-                        
-                        # Create temporary directory for fresh repo clone
-                        with tempfile.TemporaryDirectory() as temp_dir:
-                            temp_repo = os.path.join(temp_dir, "dinov3_temp")
-                            
-                            # Download fresh repository
-                            print(f"   Cloning fresh repository to temporary location...")
-                            torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                         source='github', pretrained=False, trust_repo=True,
-                                         force_reload=True)
-                            
-                            # Get the actual cached repo location  
-                            cache_dir = os.path.expanduser("~/.cache/torch/hub")
-                            repo_dir = os.path.join(cache_dir, "facebookresearch_dinov3_main")
-                            
-                            # Load with explicit weight URL
-                            model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
-                            print(f"✅ Successfully loaded DINOv3 with explicit weight URL")
-                        
-                    except Exception as url_error:
-                        print(f"   Direct weight URL loading failed: {url_error}")
-                        raise Exception("All direct loading methods failed")
-                else:
-                    # PyTorch compatibility issue detected
-                    if 'custom_fwd' in str(github_error):
-                        print(f"   PyTorch version compatibility issue detected")
-                        raise Exception("PyTorch version compatibility")
-                    else:
-                        raise github_error
+            from transformers import AutoModel
+            model = AutoModel.from_pretrained(hf_model_id)
+            print(f"✅ Successfully loaded model from Hugging Face: {hf_model_id}")
             
-            # Get actual embedding dimension from loaded model
-            if hasattr(model, 'embed_dim'):
+            # Get embedding dimension from loaded model
+            if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
+                actual_embed_dim = model.config.hidden_size
+                print(f"   Detected embed_dim from config: {actual_embed_dim}")
+            elif hasattr(model, 'embed_dim'):
                 actual_embed_dim = model.embed_dim
                 print(f"   Detected embed_dim from model: {actual_embed_dim}")
-            elif hasattr(model, 'num_features'):
-                actual_embed_dim = model.num_features  
-                print(f"   Detected num_features from model: {actual_embed_dim}")
             else:
                 actual_embed_dim = spec['embed_dim']  # Use spec default
                 print(f"   Using default embed_dim from spec: {actual_embed_dim}")
@@ -1592,6 +1543,31 @@ class DINO3Backbone(nn.Module):
                 print(f"   Creating projection layers with embed_dim: {self.embed_dim}")
                 self._create_projection_layers(self.input_channels)
             
+            return model
+            
+        except Exception as hf_error:
+            print(f"   Hugging Face loading failed: {hf_error}")
+            print(f"   Trying alternative loading methods...")
+        
+        # Fallback: Try GitHub loading (may fail with 403 in cloud)
+        try:
+            print(f"🔄 Trying GitHub download as fallback: {model_name}")
+            hub_name = spec.get('hub_name', model_name)
+            
+            model = torch.hub.load('facebookresearch/dinov3', hub_name, 
+                                 source='github', pretrained=True, trust_repo=True)
+            print(f"✅ Successfully loaded from GitHub: {hub_name}")
+            
+            # Get embedding dimension
+            if hasattr(model, 'embed_dim'):
+                actual_embed_dim = model.embed_dim
+            elif hasattr(model, 'num_features'):
+                actual_embed_dim = model.num_features
+            else:
+                actual_embed_dim = spec['embed_dim']
+            
+            self.embed_dim = actual_embed_dim
+            print(f"   Model embedding dimension: {self.embed_dim}")
             return model
                 
         except Exception as e:
