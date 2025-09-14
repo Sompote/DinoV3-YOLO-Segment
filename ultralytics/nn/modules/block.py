@@ -12,7 +12,8 @@ from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
 from .transformer import TransformerBlock
 
 try:
-    from transformers import Dinov2Model, Dinov2Config
+    # Only using DINOv3 models from Facebook Research
+    # from transformers import Dinov2Model, Dinov2Config
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
@@ -1493,70 +1494,150 @@ class DINO3Backbone(nn.Module):
         
         spec = self.dinov3_specs[model_name]
         
-        # Try official DINOv3 loading methods first
+        # Try official DINOv3 loading using PyTorch Hub pattern from documentation
         try:
-            # Strategy 1: Try PyTorch Hub with official DINOv3 repository
-            print(f"🔄 Attempting to load official DINOv3 model: {model_name}")
+            print(f"🔄 Loading DINOv3 model using official PyTorch Hub pattern: {model_name}")
             hub_name = spec.get('hub_name', model_name)
             
-            # Method 1: Load from GitHub repository (recommended)
+            # Method 1: Try to get local repository directory and use official pattern
+            import os
+            
+            # Try to get or create local DINOv3 repository
+            cache_dir = os.path.expanduser("~/.cache/torch/hub")
+            repo_dir = os.path.join(cache_dir, "facebookresearch_dinov3_main")
+            
+            # Define weight URLs for pretrained models (LVD-1689M dataset)
+            dinov3_weight_urls = {
+                'dinov3_vits16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vits16/dinov3_vits16_pretrain_lvd1689m.pth',
+                'dinov3_vitb16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitb16/dinov3_vitb16_pretrain_lvd1689m.pth', 
+                'dinov3_vitl16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vitl16/dinov3_vitl16_pretrain_lvd1689m.pth',
+                'dinov3_vith16plus': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vith16_plus/dinov3_vith16_plus_pretrain_lvd1689m.pth',
+                'dinov3_vit7b16': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_vit7b16/dinov3_vit7b16_pretrain_lvd1689m.pth',
+                'dinov3_convnext_tiny': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_tiny/dinov3_convnext_tiny_pretrain_lvd1689m.pth',
+                'dinov3_convnext_small': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_small/dinov3_convnext_small_pretrain_lvd1689m.pth',
+                'dinov3_convnext_base': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_base/dinov3_convnext_base_pretrain_lvd1689m.pth',
+                'dinov3_convnext_large': 'https://dl.fbaipublicfiles.com/dinov3/dinov3_convnext_large/dinov3_convnext_large_pretrain_lvd1689m.pth'
+            }
+            
+            # Get weight URL for this model
+            weight_url = dinov3_weight_urls.get(hub_name, dinov3_weight_urls.get(model_name))
+            
             try:
-                model = torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                     source='github', pretrained=True, trust_repo=True)
-                print(f"✅ Successfully loaded DINOv3 from GitHub: {hub_name}")
-                
-                # Verify the model has the expected embedding dimension
-                if hasattr(model, 'embed_dim'):
-                    actual_embed_dim = model.embed_dim
-                elif hasattr(model, 'num_features'):
-                    actual_embed_dim = model.num_features
-                elif hasattr(model, 'backbone') and hasattr(model.backbone, 'embed_dim'):
-                    actual_embed_dim = model.backbone.embed_dim
+                # First try: Official PyTorch Hub pattern with local repo and weight URL
+                if os.path.exists(repo_dir) and weight_url:
+                    print(f"   Using local repo with weights: {weight_url}")
+                    model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
+                    print(f"✅ Successfully loaded DINOv3 with official PyTorch Hub pattern")
                 else:
-                    actual_embed_dim = spec['embed_dim']  # Use expected dimension
+                    # Ensure we have the repository by loading it once
+                    print(f"   Downloading DINOv3 repository...")
+                    torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=False, trust_repo=True)
+                    
+                    # Now try with local repo and weights
+                    if weight_url:
+                        print(f"   Loading from local repo with weights: {weight_url}")
+                        model = torch.hub.load(repo_dir, hub_name, source='local', weights=weight_url)
+                        print(f"✅ Successfully loaded DINOv3 with weights")
+                    else:
+                        print(f"   Loading without specific weights...")
+                        model = torch.hub.load(repo_dir, hub_name, source='local')
+                        print(f"⚠️  Loaded DINOv3 architecture (may not have pretrained weights)")
                 
-                print(f"   Model embedding dimension: {actual_embed_dim}")
-                self.embed_dim = actual_embed_dim  # Update with actual dimension
-                return model
+            except Exception as local_error:
+                print(f"   Local loading failed: {local_error}")
+                print(f"   Fallback: Trying GitHub source directly...")
                 
-            except Exception as github_error:
-                print(f"   GitHub loading failed: {github_error}")
-                
-                # Method 2: Try without pretrained weights (architecture only)
-                print(f"   Trying to load architecture without pretrained weights...")
-                model = torch.hub.load('facebookresearch/dinov3', hub_name, 
-                                     source='github', pretrained=False, trust_repo=True)
-                print(f"⚠️  Loaded DINOv3 architecture without pretrained weights: {hub_name}")
-                print(f"   You may want to provide custom weights via --dino-input")
-                return model
+                # Fallback: Load directly from GitHub
+                model = torch.hub.load('facebookresearch/dinov3', hub_name, source='github', pretrained=True, trust_repo=True)
+                print(f"✅ Successfully loaded DINOv3 from GitHub (fallback)")
+            
+            # Verify and set embedding dimension
+            if hasattr(model, 'embed_dim'):
+                actual_embed_dim = model.embed_dim
+            elif hasattr(model, 'num_features'):
+                actual_embed_dim = model.num_features
+            elif hasattr(model, 'backbone') and hasattr(model.backbone, 'embed_dim'):
+                actual_embed_dim = model.backbone.embed_dim
+            else:
+                actual_embed_dim = spec['embed_dim']  # Use expected dimension
+            
+            print(f"   Model embedding dimension: {actual_embed_dim}")
+            self.embed_dim = actual_embed_dim
+            return model
                 
         except Exception as e:
             print(f"ℹ️  Official DINOv3 repository not accessible ({model_name}): {e}")
             print(f"   Falling back to compatible alternatives...")
         
-        # Strategy 2: Use DINOv2 as compatible fallback
+        # Fallback to Hugging Face transformers for cloud environments
         try:
-            print(f"🔄 Using DINOv2 as compatible fallback for DINOv3 specs")
+            print(f"🔄 Trying Hugging Face transformers as cloud fallback...")
             
-            # Map DINOv3 specs to appropriate DINOv2 model
-            embed_dim = spec['embed_dim']
-            if embed_dim <= 384:
-                dino2_model = 'facebook/dinov2-small'
-            elif embed_dim <= 768:
-                dino2_model = 'facebook/dinov2-base'
-            elif embed_dim <= 1024:
-                dino2_model = 'facebook/dinov2-large'
-            else:
-                dino2_model = 'facebook/dinov2-giant'
+            # Map DINOv3 model names to Hugging Face model IDs
+            hf_model_mapping = {
+                'dinov3_vits16': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',  # Closest available
+                'dinov3_vitb16': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',  # Closest available
+                'dinov3_vitl16': 'facebook/dinov3-convnext-large-pretrain-lvd1689m', # Closest available
+                'dinov3_convnext_tiny': 'facebook/dinov3-convnext-tiny-pretrain-lvd1689m',
+                'dinov3_convnext_small': 'facebook/dinov3-convnext-small-pretrain-lvd1689m',
+                'dinov3_convnext_base': 'facebook/dinov3-convnext-base-pretrain-lvd1689m',
+                'dinov3_convnext_large': 'facebook/dinov3-convnext-large-pretrain-lvd1689m'
+            }
+            
+            if model_name in hf_model_mapping:
+                from transformers import AutoModel
+                hf_model_id = hf_model_mapping[model_name]
+                print(f"   Loading {hf_model_id} from Hugging Face...")
                 
-            model = Dinov2Model.from_pretrained(dino2_model)
-            print(f"✅ Successfully loaded DINOv2 fallback: {dino2_model} (for DINOv3 {model_name})")
-            print(f"   Embedding dim mapping: {embed_dim} -> {model.config.hidden_size}")
-            return model
+                model = AutoModel.from_pretrained(hf_model_id)
+                print(f"✅ Successfully loaded DINOv3 from Hugging Face: {hf_model_id}")
+                
+                # Update embed_dim based on loaded model
+                if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
+                    self.embed_dim = model.config.hidden_size
+                    print(f"   Detected embedding dim: {self.embed_dim}")
+                else:
+                    self.embed_dim = spec['embed_dim']  # Use original spec
+                
+                return model
+            else:
+                print(f"   No Hugging Face mapping found for {model_name}")
+                
+        except Exception as hf_error:
+            print(f"   Hugging Face loading failed: {hf_error}")
+        
+        # Final fallback: Direct URL loading
+        try:
+            print(f"🔄 Attempting direct URL loading...")
             
-        except Exception as e:
-            print(f"❌ Failed to load DINOv2 fallback: {e}")
-            raise RuntimeError(f"Could not initialize DINOv3 model {model_name}")
+            # Construct direct URL based on Facebook's DINOv3 base URL
+            base_url = "https://dl.fbaipublicfiles.com/dinov3"
+            model_urls = {
+                'dinov3_vits16': f"{base_url}/dinov3_vits16/dinov3_vits16_pretrain_lvd1689m.pth",
+                'dinov3_vitb16': f"{base_url}/dinov3_vitb16/dinov3_vitb16_pretrain_lvd1689m.pth",
+                'dinov3_vitl16': f"{base_url}/dinov3_vitl16/dinov3_vitl16_pretrain_lvd1689m.pth",
+                'dinov3_vith16_plus': f"{base_url}/dinov3_vith16_plus/dinov3_vith16_plus_pretrain_lvd1689m.pth"
+            }
+            
+            if model_name in model_urls:
+                print(f"   Downloading from: {model_urls[model_name]}")
+                
+                # Create model architecture first
+                model = torch.hub.load('facebookresearch/dinov3', model_name, 
+                                     source='github', pretrained=False, trust_repo=True)
+                
+                # Load weights from direct URL
+                state_dict = torch.hub.load_state_dict_from_url(model_urls[model_name], map_location='cpu')
+                model.load_state_dict(state_dict, strict=True)
+                
+                print(f"✅ Successfully loaded DINOv3 via direct URL: {model_name}")
+                return model
+                
+        except Exception as url_error:
+            print(f"   Direct URL loading failed: {url_error}")
+        
+        raise RuntimeError(f"All DINOv3 loading methods failed for {model_name}. "
+                         f"Please check your internet connection or try using --dino-input with a local DINOv3 model file.")
     
     def _load_custom_dino_model(self, custom_input):
         """Load custom DINO model from various input types."""
@@ -1604,16 +1685,47 @@ class DINO3Backbone(nn.Module):
                 return model
                 
             except Exception as e:
-                print(f"   Failed to load official DINOv3: {e}")
-                print(f"   Falling back to other methods...")
+                print(f"   GitHub loading failed: {e}")
+                print(f"   Trying to load architecture without pretrained weights...")
+                
+                # Try to load just the architecture without pretrained weights
+                try:
+                    model = torch.hub.load('facebookresearch/dinov3', hub_name, 
+                                         source='github', pretrained=False, trust_repo=True)
+                    print(f"⚠️  Loaded DINOv3 architecture without pretrained weights: {hub_name}")
+                    print(f"   You may want to provide custom weights via --dino-input")
+                    
+                    # Set embedding dimension
+                    if hasattr(model, 'embed_dim'):
+                        self.embed_dim = model.embed_dim
+                    elif hasattr(model, 'num_features'):
+                        self.embed_dim = model.num_features
+                    else:
+                        # Infer from model name
+                        if 'vits' in hub_name:
+                            self.embed_dim = 384
+                        elif 'vitb' in hub_name or 'convnext' in hub_name:
+                            self.embed_dim = 768
+                        elif 'vitl' in hub_name:
+                            self.embed_dim = 1024
+                        elif 'vith' in hub_name:
+                            self.embed_dim = 1280
+                        elif 'vit7b' in hub_name:
+                            self.embed_dim = 4096
+                        else:
+                            self.embed_dim = 768
+                    
+                    return model
+                except Exception as arch_error:
+                    print(f"   Architecture loading also failed: {arch_error}")
+                    print(f"   Falling back to other methods...")
         
-        # Strategy 2: Try as Hugging Face DINOv3 model
+        # Strategy 2: Try as Hugging Face DINOv3 model (DINOv3 only)
         try:
             if '/' in custom_input and not custom_input.endswith(('.pth', '.pt', '.ckpt')):
-                # Check if it's a DINOv3 model from Hugging Face
+                # Only try DINOv3 models from Hugging Face
                 if 'dinov3' in custom_input.lower():
                     print(f"   Trying as Hugging Face DINOv3 model: {custom_input}")
-                    # Try with transformers library for DINOv3
                     try:
                         from transformers import AutoModel, AutoImageProcessor
                         model = AutoModel.from_pretrained(custom_input)
@@ -1626,18 +1738,8 @@ class DINO3Backbone(nn.Module):
                         return model
                     except Exception as hf_dinov3_error:
                         print(f"   Hugging Face DINOv3 loading failed: {hf_dinov3_error}")
-                
-                # Fallback to DINOv2 for compatibility
-                print(f"   Trying as Hugging Face DINOv2 model: {custom_input}")
-                model = Dinov2Model.from_pretrained(custom_input)
-                print(f"✅ Successfully loaded Hugging Face DINOv2: {custom_input}")
-                
-                # Update embed_dim based on loaded model
-                if hasattr(model, 'config') and hasattr(model.config, 'hidden_size'):
-                    self.embed_dim = model.config.hidden_size
-                    print(f"   Detected embedding dim: {self.embed_dim}")
-                
-                return model
+                else:
+                    print(f"   Skipping non-DINOv3 model: {custom_input}")
         except Exception as e:
             print(f"   Failed as Hugging Face model: {e}")
         
@@ -1655,17 +1757,9 @@ class DINO3Backbone(nn.Module):
                     hidden_size = state_dict['config']['hidden_size']
                     self.embed_dim = hidden_size
                     
-                    # Create model with appropriate size
-                    if hidden_size <= 384:
-                        base_model = 'facebook/dinov2-small'
-                    elif hidden_size <= 768:
-                        base_model = 'facebook/dinov2-base'
-                    elif hidden_size <= 1024:
-                        base_model = 'facebook/dinov2-large'
-                    else:
-                        base_model = 'facebook/dinov2-giant'
-                    
-                    model = Dinov2Model.from_pretrained(base_model)
+                    # Only support DINOv3 models
+                    print(f"   Local file loading only supports DINOv3 models")
+                    raise ValueError("Local file must be a DINOv3 model")
                     model.load_state_dict(state_dict.get('model', state_dict), strict=False)
                     print(f"✅ Successfully loaded custom model from: {custom_input}")
                     return model
@@ -1676,17 +1770,9 @@ class DINO3Backbone(nn.Module):
                         hidden_size = state_dict['encoder.layer.0.attention.attention.query.weight'].shape[0]
                         self.embed_dim = hidden_size
                         
-                        # Load base model and update weights
-                        if hidden_size <= 384:
-                            base_model = 'facebook/dinov2-small'
-                        elif hidden_size <= 768:
-                            base_model = 'facebook/dinov2-base'
-                        elif hidden_size <= 1024:
-                            base_model = 'facebook/dinov2-large'
-                        else:
-                            base_model = 'facebook/dinov2-giant'
-                        
-                        model = Dinov2Model.from_pretrained(base_model)
+                        # Only support DINOv3 models
+                        print(f"   Local file loading only supports DINOv3 models")
+                        raise ValueError("Local file must be a DINOv3 model")
                         model.load_state_dict(state_dict, strict=False)
                         print(f"✅ Successfully loaded custom model from: {custom_input}")
                         return model
@@ -1714,18 +1800,54 @@ class DINO3Backbone(nn.Module):
         except Exception as e:
             print(f"   Failed as PyTorch Hub: {e}")
         
-        # Strategy 4: Fallback to DINOv2 base and warn
+        # Strategy 4: Create DINOv3 architecture without pretrained weights as final option
         try:
-            print(f"   Falling back to DINOv2 base model...")
-            model = Dinov2Model.from_pretrained('facebook/dinov2-base')
-            self.embed_dim = 768
-            print(f"⚠️  Could not load custom input '{custom_input}', using DINOv2 base as fallback")
+            print(f"   Creating DINOv3 architecture without pretrained weights...")
+            
+            # Extract model variant from custom_input
+            if 'vitb16' in custom_input or 'vitb' in custom_input:
+                model_name = 'dinov3_vitb16'
+                self.embed_dim = 768
+            elif 'vits16' in custom_input or 'vits' in custom_input:
+                model_name = 'dinov3_vits16'  
+                self.embed_dim = 384
+            elif 'vitl16' in custom_input or 'vitl' in custom_input:
+                model_name = 'dinov3_vitl16'
+                self.embed_dim = 1024
+            elif 'vith' in custom_input:
+                model_name = 'dinov3_vith16_plus'
+                self.embed_dim = 1280
+            else:
+                model_name = 'dinov3_vitb16'  # default
+                self.embed_dim = 768
+            
+            # Try to load just the architecture
+            model = torch.hub.load('facebookresearch/dinov3', model_name, 
+                                 source='github', pretrained=False, trust_repo=True)
+            print(f"⚠️  Created DINOv3 architecture without pretrained weights: {model_name}")
+            print(f"   Model will train from random initialization")
             return model
+            
         except Exception as e:
-            raise RuntimeError(f"Failed to load custom DINO model '{custom_input}': {e}")
+            raise RuntimeError(f"Failed to create DINOv3 model for '{custom_input}'. "
+                             f"Error: {e}. Please check your model name or provide a valid DINOv3 variant.")
     
     def extract_features(self, features, input_size):
         """Extract features from DINOv3 patch features maintaining spatial dimensions."""
+        # Handle different feature tensor shapes
+        if len(features.shape) == 2:
+            # Case: [N_patches, D] - add batch dimension
+            features = features.unsqueeze(0)
+        elif len(features.shape) == 4:
+            # Case: [B, D, H, W] - already spatial, just adapt channels
+            B, D, H, W = features.shape
+            features_2d = features
+            adapted_features = features_2d.permute(0, 2, 3, 1)  # [B, H, W, D]
+            adapted_features = self.feature_adapter(adapted_features)  # [B, H, W, target_channels]
+            adapted_features = adapted_features.permute(0, 3, 1, 2)  # [B, target_channels, H, W]
+            adapted_features = self.spatial_projection(adapted_features)
+            return adapted_features
+        
         B, N_total, D = features.shape
         H, W = input_size
         
@@ -1825,7 +1947,22 @@ class DINO3Backbone(nn.Module):
         # Forward through DINOv3
         with torch.set_grad_enabled(not self.freeze_backbone):
             outputs = self.dino_model(pseudo_rgb_resized)
-            features = outputs.last_hidden_state
+            
+            # Handle different output formats
+            if hasattr(outputs, 'last_hidden_state'):
+                # Hugging Face transformers format
+                features = outputs.last_hidden_state
+            elif isinstance(outputs, torch.Tensor):
+                # Direct tensor output from torch.hub models
+                features = outputs
+            elif isinstance(outputs, (list, tuple)):
+                # Multiple outputs, take the first one
+                features = outputs[0]
+            elif hasattr(outputs, 'hidden_states'):
+                # Alternative transformers format
+                features = outputs.hidden_states[-1]
+            else:
+                raise ValueError(f"Unsupported DINOv3 output format: {type(outputs)}")
         
         # Extract features maintaining spatial structure
         dino_features = self.extract_features(features, (dino_size, dino_size))
