@@ -1,53 +1,59 @@
-# YOLOv12l with DINOv3 ViT-L/16 Dual-Scale Integration
-# Systematic naming: yolov12l-dino3-vitl16-dual
-# High performance configuration with P3+P4 enhancement
+# YOLOv12l with DINOv3 ViT-L/16 Dual-Scale Integration - LARGE VERSION
+# Channel flow follows standard YOLOv12l exactly, with DINO at P3 and P4 levels
+# YOLOv12l uses width scaling = 1.0, so all channels are standard size
+# ViT-L/16 has 1024 embed_dim, properly mapped to YOLOv12l P3/P4 levels (512 channels)
 
 nc: 80  # number of classes
-scales: # model compound scaling constants
+scale: l  # force large scale
+
+scales: # model compound scaling constants (from standard yolov12.yaml)
   # [depth, width, max_channels]
-  n: [0.50, 0.25, 1024]   # Nano
-  s: [0.50, 0.50, 1024]   # Small
-  m: [0.67, 0.75, 768]    # Medium
-  l: [1.00, 1.00, 512]    # Large
-  x: [1.00, 1.25, 512]    # Extra Large
+  n: [0.50, 0.25, 1024] # summary: 497 layers, 2,553,904 parameters, 2,553,888 gradients, 6.2 GFLOPs
+  s: [0.50, 0.50, 1024] # summary: 497 layers, 9,127,424 parameters, 9,127,408 gradients, 19.7 GFLOPs
+  m: [0.50, 1.00, 512] # summary: 533 layers, 19,670,784 parameters, 19,670,768 gradients, 60.4 GFLOPs
+  l: [1.00, 1.00, 512] # summary: 895 layers, 26,506,496 parameters, 26,506,480 gradients, 83.3 GFLOPs
+  x: [1.00, 1.50, 512] # summary: 895 layers, 59,414,176 parameters, 59,414,160 gradients, 185.9 GFLOPs
 
 backbone:
   # [from, repeats, module, args]
-  # YOLOv12l backbone with dual-scale DINOv3 ViT-L/16 integration
-  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
-  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
-  - [-1, 3, C3k2, [256, False, 0.25]]
-  - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8
-  - [-1, 6, C3k2, [512, False, 0.25]]
+  # Standard YOLOv12l backbone - EXACT copy from yolov12.yaml with DINO insertion at P3 and P4
+  # YOLOv12l channel progression: 3→64→128→256→256→512→512→512→1024→1024 (with l scaling 1.0x)
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2 (3→64 channels with l scaling)
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 1-P2/4 (64→128 channels with l scaling)
+  - [-1, 2, C3k2, [256, False, 0.25]]  # 2 (128→256 channels with l scaling)
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 3-P3/8 (256→256 channels with l scaling)
+  - [-1, 2, C3k2, [512, False, 0.25]]  # 4: Standard P3 (256→512 channels with l scaling)
   
-  # DINOv3 ViT-L/16 enhancement at P3 level (1024 embed_dim -> 512 channels)
-  - [-1, 1, DINO3Backbone, ['dinov3_vitl16', True, 512]]  # 5: DINOv3 Large enhanced P3
+  # DINO integration at P3 level - ViT-L/16 with 1024 embed_dim mapped to 512 channels
+  - [-1, 1, DINO3Backbone, ['dinov3_vitl16', False, 512]]  # 5: DINO enhanced P3 (512→512 channels)
   
-  - [-1, 1, Conv, [512, 3, 2]] # 6-P4/16
-  - [-1, 6, C3k2, [1024, True]]
+  # Continue standard YOLOv12l backbone 
+  - [-1, 1, Conv, [512, 3, 2]] # 6-P4/16 (512→512 channels with l scaling)
+  - [-1, 4, A2C2f, [512, True, 4]]  # 7: Standard P4 (512→512 channels with l scaling)
   
-  # DINOv3 ViT-L/16 enhancement at P4 level (1024 embed_dim -> 1024 channels)  
-  - [-1, 1, DINO3Backbone, ['dinov3_vitl16', True, 1024]]  # 8: DINOv3 Large enhanced P4
+  # DINO integration at P4 level - ViT-L/16 with 1024 embed_dim mapped to 512 channels
+  - [-1, 1, DINO3Backbone, ['dinov3_vitl16', False, 512]]  # 8: DINO enhanced P4 (512→512 channels)
   
-  - [-1, 1, Conv, [1024, 3, 2]] # 9-P5/32
-  - [-1, 3, C3k2, [1024, True]]
+  # Continue standard YOLOv12l backbone
+  - [-1, 1, Conv, [1024, 3, 2]] # 9-P5/32 (512→1024 channels with l scaling)
+  - [-1, 4, A2C2f, [1024, True, 1]]  # 10: Standard P5 (1024→1024 channels with l scaling)
 
-# YOLOv12 head with dual DINOv3-enhanced features
+# Standard YOLOv12l head architecture (adjusted for dual DINO integration)
 head:
-  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 11
-  - [[-1, 8], 1, Concat, [1]] # cat backbone P4 (DINOv3-enhanced)
-  - [-1, 3, C2fPSA, [1024, 0.5]] # 13
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 11 (1024→1024 channels)
+  - [[-1, 8], 1, Concat, [1]] # 12: cat P5 + enhanced P4 (1024 + 512 = 1536 channels)
+  - [-1, 2, A2C2f, [512, False, -1]] # 13: (1536 → 512 channels with l scaling)
 
-  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 14
-  - [[-1, 5], 1, Concat, [1]] # cat backbone P3 (DINOv3-enhanced)
-  - [-1, 3, C2fPSA, [512, 0.5]] # 16 (P3/8-small)
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 14 (512→512 channels)
+  - [[-1, 5], 1, Concat, [1]] # 15: cat with enhanced P3 (512 + 512 = 1024 channels)
+  - [-1, 2, A2C2f, [256, False, -1]] # 16: P3/8-small (1024 → 256 channels with l scaling)
 
-  - [-1, 1, Conv, [512, 3, 2]] # 17
-  - [[-1, 13], 1, Concat, [1]] # cat head P4
-  - [-1, 3, C2fPSA, [1024, 0.5]] # 19 (P4/16-medium)
+  - [-1, 1, Conv, [256, 3, 2]] # 17: (256 → 256 channels with l scaling)
+  - [[-1, 13], 1, Concat, [1]] # 18: cat head P4 (256 + 512 = 768 channels)
+  - [-1, 2, A2C2f, [512, False, -1]] # 19: P4/16-medium (768 → 512 channels with l scaling)
 
-  - [-1, 1, Conv, [1024, 3, 2]] # 20
-  - [[-1, 10], 1, Concat, [1]] # cat head P5
-  - [-1, 3, C2fPSA, [1024, 0.5]] # 22 (P5/32-large)
+  - [-1, 1, Conv, [512, 3, 2]] # 20: (512 → 512 channels with l scaling)
+  - [[-1, 10], 1, Concat, [1]] # 21: cat head P5 (512 + 1024 = 1536 channels) 
+  - [-1, 2, C3k2, [1024, True]] # 22: P5/32-large (1536 → 1024 channels with l scaling)
 
-  - [[16, 19, 22], 1, Detect, [nc]] # Detect(P3, P4, P5)
+  - [[16, 19, 22], 1, Detect, [nc]] # 23: Detect(P3=256, P4=512, P5=1024)

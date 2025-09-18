@@ -270,6 +270,17 @@ python train_yolov12_dino.py \
     --epochs 100 \
     --batch-size 16 \
     --name high_performance_dual_withp0
+
+# 🚀 ULTIMATE PERFORMANCE: YOLOv12x + Full-Scale DINOv3 Integration
+python train_yolov12_dino.py \
+    --data /Users/sompoteyouwai/Downloads/crack/data.yaml \
+    --yolo-size x \
+    --dino-version 3 \
+    --dino-input vitb16 \
+    --dino-variant vitb16 \
+    --epochs 100 \
+    --batch-size 16 \
+    --name high_performance_dual_withp0
   
 ```
 

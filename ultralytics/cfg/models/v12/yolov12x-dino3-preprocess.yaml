@@ -16,15 +16,15 @@ scales: # model compound scaling constants (from standard yolov12.yaml)
 backbone:
   # [from, repeats, module, args] - DINO3 Preprocessor followed by exact YOLOv12x backbone
   - [-1, 1, DINO3Preprocessor, ['DINO_MODEL_NAME', False, 3]]  # 0: Input enhancement (3 channels)
-  - [-1, 1, Conv, [64, 3, 2]]  # 1-P1/2 (3’96 channels with x scaling)
-  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 2-P2/4 (96’192 channels with x scaling)
-  - [-1, 2, C3k2, [256, False, 0.25]] # 3 (192’384 channels with x scaling)
-  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 4-P3/8 (384’384 channels with x scaling)
-  - [-1, 2, C3k2, [512, False, 0.25]] # 5 (384’768 channels with x scaling)
-  - [-1, 1, Conv, [512, 3, 2]] # 6-P4/16 (768’768 channels with x scaling)
-  - [-1, 4, A2C2f, [512, True, 4]] # 7 (768’768 channels with x scaling)
-  - [-1, 1, Conv, [1024, 3, 2]] # 8-P5/32 (768’1536 channels with x scaling)
-  - [-1, 4, A2C2f, [1024, True, 1]] # 9 (1536’1536 channels with x scaling)
+  - [-1, 1, Conv, [64, 3, 2]]  # 1-P1/2 (3->96 channels with x scaling)
+  - [-1, 1, Conv, [128, 3, 2, 1, 2]] # 2-P2/4 (96->192 channels with x scaling)
+  - [-1, 2, C3k2, [256, False, 0.25]] # 3 (192->384 channels with x scaling)
+  - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 4-P3/8 (384->384 channels with x scaling)
+  - [-1, 2, C3k2, [512, False, 0.25]] # 5 (384->768 channels with x scaling)
+  - [-1, 1, Conv, [512, 3, 2]] # 6-P4/16 (768->768 channels with x scaling)
+  - [-1, 4, A2C2f, [512, True, 4]] # 7 (768->768 channels with x scaling)
+  - [-1, 1, Conv, [1024, 3, 2]] # 8-P5/32 (768->1536 channels with x scaling)
+  - [-1, 4, A2C2f, [1024, True, 1]] # 9 (1536->1536 channels with x scaling)
 
 # YOLOv12x head - adjusted layer indices for preprocessor insertion
 head:

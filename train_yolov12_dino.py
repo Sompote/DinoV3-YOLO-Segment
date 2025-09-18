@@ -69,7 +69,8 @@ def create_model_config_path(yolo_size, dino_version=None, dino_variant=None, in
             return 'ultralytics/cfg/models/v12/yolov12-dino3-preprocess.yaml'
     
     # Handle custom DINO input with variant (integrated approach)
-    if dino_input or dino_variant == 'custom':
+    # Only use custom config if no specific variant is provided
+    if dino_input and not dino_variant:
         print("🔧 Using DINO3 Integrated Architecture")
         print("   📐 DINO integrated inside YOLOv12 backbone")
         return 'ultralytics/cfg/models/v12/yolov12-dino3-custom.yaml'
