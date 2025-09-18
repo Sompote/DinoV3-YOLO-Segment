@@ -470,6 +470,10 @@ class BaseTrainer:
             self.final_eval()
             if self.args.plots:
                 self.plot_metrics()
+            
+            # Clean up all epoch checkpoints at training end (keep only last.pt and best.pt)
+            self._cleanup_epoch_checkpoints()
+            
             self.run_callbacks("on_train_end")
         self._clear_memory()
         self.run_callbacks("teardown")
@@ -541,7 +545,15 @@ class BaseTrainer:
         if self.best_fitness == self.fitness:
             self.best.write_bytes(serialized_ckpt)  # save best.pt
         if (self.save_period > 0) and (self.epoch % self.save_period == 0):
-            (self.wdir / f"epoch{self.epoch}.pt").write_bytes(serialized_ckpt)  # save epoch, i.e. 'epoch3.pt'
+            epoch_ckpt = self.wdir / f"epoch{self.epoch}.pt"
+            epoch_ckpt.write_bytes(serialized_ckpt)  # save epoch, i.e. 'epoch3.pt'
+            
+            # Clean up previous epoch checkpoint to save disk space
+            prev_epoch = self.epoch - self.save_period
+            if prev_epoch > 0:
+                prev_ckpt = self.wdir / f"epoch{prev_epoch}.pt"
+                if prev_ckpt.exists():
+                    prev_ckpt.unlink()  # Remove previous epoch checkpoint
         # if self.args.close_mosaic and self.epoch == (self.epochs - self.args.close_mosaic - 1):
         #    (self.wdir / "last_mosaic.pt").write_bytes(serialized_ckpt)  # save mosaic checkpoint
 
@@ -592,6 +604,26 @@ class BaseTrainer:
         self.optimizer.zero_grad()
         if self.ema:
             self.ema.update(self.model)
+
+    def _cleanup_epoch_checkpoints(self):
+        """Clean up all epoch checkpoint files to save disk space (keep only last.pt and best.pt)."""
+        import glob
+        
+        # Find all epoch checkpoint files
+        epoch_pattern = str(self.wdir / "epoch*.pt")
+        epoch_files = glob.glob(epoch_pattern)
+        
+        removed_count = 0
+        for epoch_file in epoch_files:
+            try:
+                Path(epoch_file).unlink()
+                removed_count += 1
+            except Exception as e:
+                LOGGER.warning(f"Failed to remove {epoch_file}: {e}")
+        
+        if removed_count > 0:
+            LOGGER.info(f"Cleaned up {removed_count} epoch checkpoint(s) to save disk space")
+            LOGGER.info(f"Kept: last.pt and best.pt in {self.wdir}")
 
     def preprocess_batch(self, batch):
         """Allows custom preprocessing model inputs and ground truths depending on task type."""

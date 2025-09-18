@@ -771,7 +771,7 @@ class Hiera(nn.Module):
         """Generates positional embeddings by interpolating and combining window and background embeddings."""
         h, w = hw
         window_embed = self.pos_embed_window
-        pos_embed = F.interpolate(self.pos_embed, size=(h, w), mode="bicubic")
+        pos_embed = F.interpolate(self.pos_embed, size=(h, w), mode="bilinear", align_corners=False)
         pos_embed = pos_embed + window_embed.tile([x // y for x, y in zip(pos_embed.shape, window_embed.shape)])
         pos_embed = pos_embed.permute(0, 2, 3, 1)
         return pos_embed
