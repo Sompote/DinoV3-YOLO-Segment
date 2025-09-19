@@ -1934,7 +1934,7 @@ class DINO3Preprocessor(nn.Module):
         print(f"   🏗️  Architecture: Input -> DINO3 -> Enhanced Features -> Original YOLOv12")
 
     def _load_dino_model(self):
-        """Load DINO model with same logic as DINO3Backbone"""
+        """Load DINO model using Hugging Face as primary method"""
         spec = self.dinov3_specs.get(self.model_name, self.dinov3_specs['dinov3_vitb16'])
         
         print(f"Loading DINOv3 VIT model: {self.model_name}")
@@ -1942,49 +1942,34 @@ class DINO3Preprocessor(nn.Module):
         print(f"  Embedding dim: {spec['embed_dim']}")
         print(f"  Patch size: {spec['patch_size']}")
         
-        dino_model = None
-        
-        # Try official DINOv3 first
+        # Use Hugging Face as primary loading method
         try:
-            import torch.hub
-            print(f"🔄 Attempting to load official DINOv3 model: {self.model_name}")
-            dino_model = torch.hub.load('facebookresearch/dinov3', spec['hub_name'], pretrained=True)
-            print(f"✅ Successfully loaded official DINOv3: {self.model_name}")
+            print(f"🔄 Loading DINOv3 model via Hugging Face: {self.model_name}")
+            from transformers import AutoModel
+            
+            # Map DINOv3 variants to DINOv2 equivalents on Hugging Face
+            dinov2_mapping = {
+                'dinov3_vits16': 'facebook/dinov2-small',
+                'dinov3_vitb16': 'facebook/dinov2-base', 
+                'dinov3_vitl16': 'facebook/dinov2-large',
+                'dinov3_vith16plus': 'facebook/dinov2-giant',
+                'dinov3_vit7b16': 'facebook/dinov2-giant',
+                # Handle simplified names
+                'vits16': 'facebook/dinov2-small',
+                'vitb16': 'facebook/dinov2-base',
+                'vitl16': 'facebook/dinov2-large',
+                'vith16plus': 'facebook/dinov2-giant',
+                'vit7b16': 'facebook/dinov2-giant'
+            }
+            
+            dinov2_model = dinov2_mapping.get(self.model_name, 'facebook/dinov2-base')
+            dino_model = AutoModel.from_pretrained(dinov2_model)
+            print(f"✅ Successfully loaded DINOv2 from Hugging Face: {dinov2_model} (for DINOv3 {self.model_name})")
+            print(f"   Embedding dim mapping: {dino_model.config.hidden_size} -> {spec['embed_dim']}")
             
         except Exception as e:
-            print(f"   GitHub loading failed: {e}")
-            print(f"   Trying to load architecture without pretrained weights...")
-            
-            try:
-                dino_model = torch.hub.load('facebookresearch/dinov3', spec['hub_name'], pretrained=False)
-                print(f"⚠️  Loaded DINOv3 architecture without pretrained weights: {self.model_name}")
-            except Exception as e2:
-                print(f"ℹ️  Official DINOv3 repository not accessible ({self.model_name}): {e2}")
-                print(f"   Falling back to compatible alternatives...")
-        
-        # Fallback to DINOv2 if DINOv3 not available
-        if dino_model is None:
-            try:
-                print(f"🔄 Using DINOv2 as compatible fallback for DINOv3 specs")
-                from transformers import AutoModel
-                
-                # Map DINOv3 variants to DINOv2 equivalents
-                dinov2_mapping = {
-                    'dinov3_vits16': 'facebook/dinov2-small',
-                    'dinov3_vitb16': 'facebook/dinov2-base', 
-                    'dinov3_vitl16': 'facebook/dinov2-large',
-                    'dinov3_vith16plus': 'facebook/dinov2-giant',
-                    'dinov3_vit7b16': 'facebook/dinov2-giant'
-                }
-                
-                dinov2_model = dinov2_mapping.get(self.model_name, 'facebook/dinov2-base')
-                dino_model = AutoModel.from_pretrained(dinov2_model)
-                print(f"✅ Successfully loaded DINOv2 fallback: {dinov2_model} (for DINOv3 {self.model_name})")
-                print(f"   Embedding dim mapping: {dino_model.config.hidden_size} -> {spec['embed_dim']}")
-                
-            except Exception as e3:
-                print(f"❌ Failed to load any DINO model: {e3}")
-                raise RuntimeError(f"Could not load any DINO model variant for {self.model_name}")
+            print(f"❌ Failed to load DINO model from Hugging Face: {e}")
+            raise RuntimeError(f"Could not load DINO model variant for {self.model_name}: {e}")
         
         # Freeze weights if requested
         if self.freeze_backbone:

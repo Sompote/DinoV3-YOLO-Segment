@@ -481,6 +481,9 @@ def init_seeds(seed=0, deterministic=False):
     # torch.backends.cudnn.benchmark = True  # AutoBatch problem https://github.com/ultralytics/yolov5/issues/9287
     if deterministic:
         if TORCH_2_0:
+            # Suppress warnings for non-deterministic operations like bicubic upsampling
+            import warnings
+            warnings.filterwarnings("ignore", ".*upsample_bicubic2d_backward_out_cuda does not have a deterministic implementation.*")
             torch.use_deterministic_algorithms(True, warn_only=True)  # warn if deterministic is not possible
             torch.backends.cudnn.deterministic = True
             os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
