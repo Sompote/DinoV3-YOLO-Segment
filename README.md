@@ -270,17 +270,6 @@ python train_yolov12_dino.py \
     --epochs 100 \
     --batch-size 16 \
     --name high_performance_dual_withp0
-
-# 🚀 ULTIMATE PERFORMANCE: YOLOv12x + Full-Scale DINOv3 Integration
-python train_yolov12_dino.py \
-    --data /Users/sompoteyouwai/Downloads/crack/data.yaml \
-    --yolo-size x \
-    --dino-version 3 \
-    --dino-input vitb16 \
-    --dino-variant vitb16 \
-    --epochs 100 \
-    --batch-size 16 \
-    --name high_performance_dual_withp0
   
 ```
 
@@ -311,6 +300,7 @@ python train_yolov12_dino.py \
     --data coco.yaml \
     --yolo-size l \
     --dino-input vitb16 \
+    --dino-version 3 \
     --integration dual \
     --epochs 200
 
@@ -318,6 +308,7 @@ python train_yolov12_dino.py \
 python train_yolov12_dino.py \
     --data coco.yaml \
     --yolo-size m \
+    --dino-version 3 \
     --dino-input dinov3_convnext_base \
     --epochs 150
 
@@ -325,6 +316,7 @@ python train_yolov12_dino.py \
 python train_yolov12_dino.py \
     --data coco.yaml \
     --yolo-size l \
+    --dino-version 3 \
     --dino-input vitb16 \
     --freeze-dino \
     --epochs 100
@@ -513,12 +505,159 @@ results = model.train(
 # - yolov12-dino3-convnext.yaml (hybrid, +4.5% mAP)
 ```
 
-## Prediction
+## 🔍 Inference & Prediction
+
+### 🖥️ **Interactive Gradio Web Interface**
+
+Launch the **web-based interface** for easy image upload and real-time object detection:
+
+```bash
+# Start Gradio web interface
+python app.py
+
+# Access the interface at: http://localhost:7860
+```
+
+**Features:**
+- 📁 **Model Loading**: Upload any `.pt` weights file through the web interface
+- 🖼️ **Image Upload**: Drag and drop images for instant detection
+- ⚙️ **Real-time Parameters**: Adjust confidence, IoU thresholds, and image size
+- 📊 **Detailed Results**: View detection boxes with confidence scores and class names
+- 🎯 **Device Selection**: Choose between CPU, CUDA, or MPS
+
+### 📝 **Command Line Inference**
+
+Use the powerful command-line interface for batch processing and automation:
+
+```bash
+# Single image inference
+python inference.py --weights best.pt --source image.jpg --save --show
+
+# Batch inference on directory
+python inference.py --weights runs/detect/train/weights/best.pt --source test_images/ --output results/
+
+# Custom thresholds and options
+python inference.py --weights model.pt --source images/ --conf 0.5 --iou 0.7 --save-txt --save-crop
+
+# DINOv3-enhanced model inference
+python inference.py --weights runs/detect/high_performance_dual/weights/best.pt --source data/ --conf 0.3
+```
+
+**Command Options:**
+- `--weights`: Path to trained model weights (.pt file)
+- `--source`: Image file, directory, or list of images
+- `--conf`: Confidence threshold (0.01-1.0, default: 0.25)
+- `--iou`: IoU threshold for NMS (0.01-1.0, default: 0.7)
+- `--save`: Save annotated images
+- `--save-txt`: Save detection results to txt files
+- `--save-crop`: Save cropped detection images
+- `--device`: Device to run on (cpu, cuda, mps)
+
+### 🐍 **Python API**
+
+Direct integration into your Python applications:
+
 ```python
 from ultralytics import YOLO
+from inference import YOLOInference
 
+# Method 1: Standard YOLO API
 model = YOLO('yolov12{n/s/m/l/x}.pt')
-model.predict()
+results = model.predict('image.jpg', conf=0.25, iou=0.7)
+
+# Method 2: Enhanced Inference Class
+inference = YOLOInference(
+    weights='runs/detect/train/weights/best.pt',
+    conf=0.25,
+    iou=0.7,
+    device='cuda'
+)
+
+# Single image
+results = inference.predict_single('image.jpg', save=True)
+
+# Batch processing
+results = inference.predict_batch('images_folder/', save=True)
+
+# From image list
+image_list = ['img1.jpg', 'img2.jpg', 'img3.jpg']
+results = inference.predict_from_list(image_list, save=True)
+
+# Print detailed results
+inference.print_results_summary(results, "test_images")
+```
+
+### 🎯 **DINOv3-Enhanced Inference**
+
+Use your trained DINOv3-YOLOv12 models for enhanced object detection:
+
+```bash
+# DINOv3 single-scale model
+python inference.py \
+    --weights runs/detect/efficient_single/weights/best.pt \
+    --source test_images/ \
+    --conf 0.25 \
+    --save
+
+# DINOv3 dual-scale model (highest performance)
+python inference.py \
+    --weights runs/detect/high_performance_dual/weights/best.pt \
+    --source complex_scene.jpg \
+    --conf 0.3 \
+    --iou 0.6 \
+    --save --show
+
+# Input preprocessing model
+python inference.py \
+    --weights runs/detect/stable_preprocessing/weights/best.pt \
+    --source video.mp4 \
+    --save
+```
+
+### 📊 **Inference Performance Guide**
+
+| Model Type | Speed | Memory | Best For | Confidence Threshold |
+|:-----------|:------|:-------|:---------|:-------------------|
+| **YOLOv12n** | ⚡ Fastest | 2GB | Embedded systems | 0.4-0.6 |
+| **YOLOv12s** | ⚡ Fast | 3GB | General purpose | 0.3-0.5 |
+| **YOLOv12s-dino3-single** | 🎯 Balanced | 4GB | Medium objects | 0.25-0.4 |
+| **YOLOv12s-dino3-dual** | 🎪 Accurate | 8GB | Complex scenes | 0.2-0.35 |
+| **YOLOv12l-dino3-vitl16** | 🏆 Maximum | 16GB | Research/High-end | 0.15-0.3 |
+
+### 🔧 **Advanced Inference Options**
+
+```python
+# Custom preprocessing and postprocessing
+from inference import YOLOInference
+import cv2
+
+inference = YOLOInference('model.pt')
+
+# Load and preprocess image
+image = cv2.imread('image.jpg')
+image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+# Run inference with custom parameters
+results = inference.predict_single(
+    source='preprocessed_image.jpg',
+    save=True,
+    show=False,
+    save_txt=True,
+    save_conf=True,
+    save_crop=True,
+    output_dir='custom_results/'
+)
+
+# Access detailed results
+for result in results:
+    boxes = result.boxes.xyxy.cpu().numpy()  # Bounding boxes
+    confs = result.boxes.conf.cpu().numpy()  # Confidence scores  
+    classes = result.boxes.cls.cpu().numpy()  # Class IDs
+    names = result.names  # Class names dictionary
+    
+    print(f"Detected {len(boxes)} objects")
+    for box, conf, cls in zip(boxes, confs, classes):
+        print(f"Class: {names[int(cls)]}, Confidence: {conf:.3f}")
 ```
 
 ## Export
@@ -530,12 +669,32 @@ model.export(format="engine", half=True)  # or format="onnx"
 ```
 
 
-## Demo
+## 🖥️ Interactive Demo
+
+### 🚀 **Gradio Web Interface**
+
+Launch the interactive web interface for real-time object detection:
 
 ```bash
+# Start the Gradio web application
 python app.py
-# Please visit http://127.0.0.1:7860
+
+# Open your browser and visit: http://localhost:7860
 ```
+
+**Web Interface Features:**
+- 📤 **Easy Upload**: Drag and drop model weights (.pt files) and images
+- 🎛️ **Real-time Controls**: Adjust confidence, IoU thresholds, and image size with sliders
+- 🖼️ **Instant Results**: See detection results with bounding boxes and confidence scores
+- 📊 **Detailed Output**: View complete detection statistics and object counts
+- ⚙️ **Device Selection**: Choose between CPU, CUDA, and MPS acceleration
+- 🔄 **Auto-refresh**: Results update automatically when parameters change
+
+**Perfect for:**
+- 🎓 **Demonstrations**: Show model capabilities to stakeholders
+- 🧪 **Testing**: Quick evaluation of different models and parameters
+- 🎨 **Prototyping**: Rapid iteration without command-line complexity
+- 📱 **User-friendly**: No technical knowledge required
 
 ## 🧬 Official DINOv3 Integration
 
