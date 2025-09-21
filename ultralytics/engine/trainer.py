@@ -706,7 +706,7 @@ class BaseTrainer:
         self.plots[path] = {"data": data, "timestamp": time.time()}
 
     def final_eval(self):
-        """Performs final evaluation and validation for object detection YOLO model."""
+        """Performs final evaluation using test data for object detection YOLO model."""
         ckpt = {}
         for f in self.last, self.best:
             if f.exists():
@@ -715,9 +715,35 @@ class BaseTrainer:
                 elif f is self.best:
                     k = "train_results"  # update best.pt train_metrics from last.pt
                     strip_optimizer(f, updates={k: ckpt[k]} if k in ckpt else None)
-                    LOGGER.info(f"\nValidating {f}...")
-                    self.validator.args.plots = self.args.plots
-                    self.metrics = self.validator(model=f)
+                    LOGGER.info(f"\nFinal testing {f} on test data...")
+                    
+                    # Check if test data exists
+                    if "test" in self.data and self.data["test"]:
+                        LOGGER.info("Using test dataset for final evaluation")
+                        
+                        # Create test data loader  
+                        # Use the same batch size calculation as in _setup_train
+                        batch_size = self.batch_size
+                        test_dataset = self.data["test"]
+                        test_loader = self.get_dataloader(
+                            test_dataset, 
+                            batch_size=batch_size if self.args.task == "obb" else batch_size * 2, 
+                            rank=-1, 
+                            mode="val"
+                        )
+                        
+                        # Create test validator with test data loader
+                        test_validator = self.get_validator()
+                        test_validator.dataloader = test_loader
+                        test_validator.args.plots = self.args.plots
+                        test_validator.args.split = "test"
+                        
+                        self.metrics = test_validator(model=f)
+                    else:
+                        LOGGER.warning("Test dataset not found, falling back to validation dataset for final evaluation")
+                        self.validator.args.plots = self.args.plots
+                        self.metrics = self.validator(model=f)
+                    
                     self.metrics.pop("fitness", None)
                     self.run_callbacks("on_fit_epoch_end")
 
