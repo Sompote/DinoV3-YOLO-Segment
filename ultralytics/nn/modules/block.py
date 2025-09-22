@@ -14,7 +14,7 @@ from .transformer import TransformerBlock
 
 try:
     # Only using DINOv3 models from Facebook Research
-    # from transformers import Dinov2Model, Dinov2Config
+    from transformers import Dinov2Model, Dinov2Config
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
@@ -1569,8 +1569,21 @@ class DINO3Backbone(nn.Module):
         print(f"   Loading from Hugging Face: {hf_model_id}")
         
         try:
-            from transformers import AutoModel
-            model = AutoModel.from_pretrained(hf_model_id)
+            from transformers import AutoModel, AutoConfig
+            
+            # Load config first and ensure required attributes exist
+            config = AutoConfig.from_pretrained(hf_model_id)
+            
+            # Add missing attributes that might be expected by transformers
+            if not hasattr(config, 'output_attentions'):
+                config.output_attentions = False
+            if not hasattr(config, 'output_hidden_states'):
+                config.output_hidden_states = False
+            if not hasattr(config, 'return_dict'):
+                config.return_dict = True
+                
+            # Load model with the configured config
+            model = AutoModel.from_pretrained(hf_model_id, config=config)
             print(f"✅ Successfully loaded model from Hugging Face: {hf_model_id}")
             
             # Get embedding dimension from loaded model
@@ -1640,8 +1653,21 @@ class DINO3Backbone(nn.Module):
         # Load from Hugging Face
         try:
             print(f"   Loading from Hugging Face: {hf_model_id}")
-            from transformers import AutoModel
-            model = AutoModel.from_pretrained(hf_model_id)
+            from transformers import AutoModel, AutoConfig
+            
+            # Load config first and ensure required attributes exist
+            config = AutoConfig.from_pretrained(hf_model_id)
+            
+            # Add missing attributes that might be expected by transformers
+            if not hasattr(config, 'output_attentions'):
+                config.output_attentions = False
+            if not hasattr(config, 'output_hidden_states'):
+                config.output_hidden_states = False
+            if not hasattr(config, 'return_dict'):
+                config.return_dict = True
+                
+            # Load model with the configured config
+            model = AutoModel.from_pretrained(hf_model_id, config=config)
             print(f"✅ Successfully loaded custom model from Hugging Face: {hf_model_id}")
             
             # Get embedding dimension

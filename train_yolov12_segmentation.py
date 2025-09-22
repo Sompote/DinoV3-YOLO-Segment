@@ -1,0 +1,550 @@
+#!/usr/bin/env python3
+"""
+YOLOv12 Instance Segmentation Training Script with DINO Enhancement
+
+This script provides a systematic approach to training YOLOv12 instance segmentation models 
+with optional DINOv3 enhancement, using clear CLI arguments specifically for segmentation tasks.
+
+Usage Examples:
+    # Basic segmentation training
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --epochs 100
+
+    # DINO-enhanced segmentation (single-scale)
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dino-integration single --epochs 100
+
+    # DINO-enhanced segmentation (dual-scale for best performance)
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dino-integration dual --epochs 100
+
+    # DINO preprocessing approach
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-preprocessing dinov3_vitb16 --epochs 100
+
+    # TRIPLE DINO integration (preprocessing + backbone - ultimate performance)
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-preprocessing dinov3_vitb16 --dino-variant vitl16 --dino-integration dual --epochs 150
+"""
+
+import argparse
+import sys
+import os
+from pathlib import Path
+import torch
+import tempfile
+import yaml
+
+# Add ultralytics to path
+FILE = Path(__file__).resolve()
+ROOT = FILE.parent
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
+from ultralytics import YOLO
+from ultralytics.utils import LOGGER
+
+def create_segmentation_config_path(model_size, use_dino=False, dino_variant=None, dino_integration=None, dino_preprocessing=None):
+    """
+    Create segmentation model configuration path based on parameters.
+    
+    Args:
+        model_size (str): YOLOv12 size (n, s, m, l, x)
+        use_dino (bool): Whether to use DINO enhancement
+        dino_variant (str): DINO variant (vitb16, vitl16, etc.)
+        dino_integration (str): Integration type (single, dual)
+        dino_preprocessing (str): DINO preprocessing model
+    
+    Returns:
+        str: Path to segmentation model configuration file
+    """
+    if not use_dino:
+        # Base YOLOv12 segmentation model
+        return f'ultralytics/cfg/models/v12/yolov12{model_size}-seg.yaml'
+    
+    # Triple integration: preprocessing + backbone integration (ultimate performance)
+    if dino_preprocessing and dino_variant:
+        # P0 + P3/P4 integration
+        config_name = f'yolov12{model_size}-dino3-triple-{dino_variant}-{dino_integration}-seg.yaml'
+        config_path = f'ultralytics/cfg/models/v12/{config_name}'
+        if Path(config_path).exists():
+            return config_path
+        else:
+            # Fallback to generic triple integration config
+            return 'ultralytics/cfg/models/v12/yolov12-dino3-triple-seg.yaml'
+    
+    # DINO preprocessing only (input enhancement)
+    if dino_preprocessing and not dino_variant:
+        config_path = f'ultralytics/cfg/models/v12/yolov12{model_size}-dino3-preprocess-seg.yaml'
+        if Path(config_path).exists():
+            return config_path
+        else:
+            # Fallback to generic preprocessing config
+            return 'ultralytics/cfg/models/v12/yolov12-dino3-preprocess-seg.yaml'
+    
+    # DINO integrated approach only (backbone enhancement)
+    if dino_variant and dino_integration:
+        if dino_integration == 'dual':
+            config_name = f'yolov12{model_size}-dino3-{dino_variant}-dual-seg.yaml'
+        else:
+            config_name = f'yolov12{model_size}-dino3-{dino_variant}-single-seg.yaml'
+        
+        config_path = f'ultralytics/cfg/models/v12/{config_name}'
+        if Path(config_path).exists():
+            return config_path
+        else:
+            # Fallback to generic DINO segmentation config
+            return 'ultralytics/cfg/models/v12/yolov12-dino3-seg.yaml'
+    
+    # Default fallback
+    return f'ultralytics/cfg/models/v12/yolov12{model_size}-seg.yaml'
+
+def get_segmentation_batch_size(model_size, use_dino=False, dino_integration='single', is_triple=False):
+    """Get recommended batch size for segmentation training."""
+    # Segmentation requires more memory than detection, so reduce batch sizes
+    base_batches = {'n': 32, 's': 16, 'm': 8, 'l': 6, 'x': 4}
+    batch = base_batches.get(model_size, 8)
+    
+    if use_dino:
+        # Further reduce for DINO models
+        batch = max(batch // 2, 2)
+        if dino_integration == 'dual':
+            batch = max(batch // 2, 1)
+        # Triple integration uses even more memory
+        if is_triple:
+            batch = max(batch // 2, 1)
+    
+    return batch
+
+def get_segmentation_epochs(use_dino=False):
+    """Get recommended epochs for segmentation training."""
+    if use_dino:
+        return 100  # DINO-enhanced models converge faster
+    else:
+        return 150  # Standard segmentation training (less than detection)
+
+def parse_segmentation_arguments():
+    """Parse command line arguments for segmentation training."""
+    parser = argparse.ArgumentParser(
+        description='YOLOv12 Instance Segmentation Training with Optional DINO Enhancement',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic segmentation training
+  python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s
+
+  # DINO-enhanced single-scale segmentation
+  python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dino-integration single
+
+  # DINO-enhanced dual-scale segmentation (best performance)
+  python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dino-integration dual
+
+  # DINO preprocessing segmentation
+  python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-preprocessing dinov3_vitb16
+
+  # TRIPLE DINO integration (ultimate performance)
+  python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-preprocessing dinov3_vitb16 --dino-variant vitl16 --dino-integration dual
+        """
+    )
+    
+    # Required arguments
+    parser.add_argument('--data', type=str, required=True,
+                       help='Segmentation dataset YAML file path (e.g., segmentation_data.yaml)')
+    parser.add_argument('--model-size', type=str, required=True, 
+                       choices=['n', 's', 'm', 'l', 'x'],
+                       help='YOLOv12 model size: n(nano), s(small), m(medium), l(large), x(extra-large)')
+    
+    # Segmentation task specification
+    parser.add_argument('--task', type=str, default='segment', choices=['segment'],
+                       help='Task type (fixed to segment for this script)')
+    
+    # DINO enhancement options
+    dino_group = parser.add_argument_group('DINO Enhancement Options')
+    dino_group.add_argument('--use-dino', action='store_true',
+                           help='Enable DINO enhancement for better segmentation performance')
+    dino_group.add_argument('--dino-variant', type=str, default=None,
+                           choices=['vits16', 'vitb16', 'vitl16', 'vith16_plus', 'vit7b16',
+                                   'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large'],
+                           help='DINO model variant (required if --use-dino with integration)')
+    dino_group.add_argument('--dino-integration', type=str, default='single',
+                           choices=['single', 'dual'],
+                           help='DINO integration: single(P4 level) or dual(P3+P4 levels)')
+    dino_group.add_argument('--dino-preprocessing', type=str, default=None,
+                           help='DINO preprocessing model (alternative to --dino-variant)')
+    dino_group.add_argument('--freeze-dino', action='store_true', default=True,
+                           help='Freeze DINO weights during training (default: True)')
+    dino_group.add_argument('--unfreeze-dino', action='store_true',
+                           help='Make DINO weights trainable (overrides --freeze-dino)')
+    
+    # Segmentation-specific training parameters
+    seg_group = parser.add_argument_group('Segmentation Training Parameters')
+    seg_group.add_argument('--epochs', type=int, default=None,
+                          help='Number of training epochs (auto-determined if not specified)')
+    seg_group.add_argument('--batch-size', type=int, default=None,
+                          help='Batch size (auto-determined if not specified)')
+    seg_group.add_argument('--imgsz', type=int, default=640,
+                          help='Image size for training')
+    seg_group.add_argument('--overlap-mask', action='store_true', default=True,
+                          help='Allow overlapping masks in segmentation')
+    seg_group.add_argument('--mask-ratio', type=int, default=4,
+                          help='Mask downsample ratio')
+    seg_group.add_argument('--single-cls', action='store_true',
+                          help='Train as single-class segmentation')
+    
+    # Loss function parameters
+    loss_group = parser.add_argument_group('Segmentation Loss Parameters')
+    loss_group.add_argument('--box-loss-gain', type=float, default=7.5,
+                           help='Box loss gain for segmentation')
+    loss_group.add_argument('--cls-loss-gain', type=float, default=0.5,
+                           help='Classification loss gain')
+    loss_group.add_argument('--dfl-loss-gain', type=float, default=1.5,
+                           help='DFL loss gain')
+    
+    # Training optimization
+    opt_group = parser.add_argument_group('Training Optimization')
+    opt_group.add_argument('--device', type=str, default='0',
+                          help='CUDA device (e.g., 0 or 0,1,2,3) or cpu')
+    opt_group.add_argument('--workers', type=int, default=8,
+                          help='Number of data loader workers')
+    opt_group.add_argument('--lr', type=float, default=0.01,
+                          help='Initial learning rate')
+    opt_group.add_argument('--weight-decay', type=float, default=0.0005,
+                          help='Weight decay')
+    opt_group.add_argument('--momentum', type=float, default=0.937,
+                          help='SGD momentum')
+    opt_group.add_argument('--warmup-epochs', type=int, default=3,
+                          help='Warmup epochs')
+    opt_group.add_argument('--patience', type=int, default=10,
+                          help='Early stopping patience')
+    
+    # Data augmentation for segmentation
+    aug_group = parser.add_argument_group('Segmentation Data Augmentation')
+    aug_group.add_argument('--hsv-h', type=float, default=0.015,
+                          help='HSV-Hue augmentation')
+    aug_group.add_argument('--hsv-s', type=float, default=0.7,
+                          help='HSV-Saturation augmentation')
+    aug_group.add_argument('--hsv-v', type=float, default=0.4,
+                          help='HSV-Value augmentation')
+    aug_group.add_argument('--degrees', type=float, default=0.0,
+                          help='Rotation degrees')
+    aug_group.add_argument('--translate', type=float, default=0.1,
+                          help='Translation augmentation')
+    aug_group.add_argument('--scale', type=float, default=0.5,
+                          help='Scale augmentation')
+    aug_group.add_argument('--shear', type=float, default=0.0,
+                          help='Shear augmentation')
+    aug_group.add_argument('--perspective', type=float, default=0.0,
+                          help='Perspective augmentation')
+    aug_group.add_argument('--flipud', type=float, default=0.0,
+                          help='Vertical flip probability')
+    aug_group.add_argument('--fliplr', type=float, default=0.5,
+                          help='Horizontal flip probability')
+    aug_group.add_argument('--mosaic', type=float, default=1.0,
+                          help='Mosaic augmentation probability')
+    aug_group.add_argument('--mixup', type=float, default=0.0,
+                          help='Mixup augmentation probability')
+    aug_group.add_argument('--copy-paste', type=float, default=0.1,
+                          help='Copy-paste augmentation probability')
+    
+    # Experiment management
+    exp_group = parser.add_argument_group('Experiment Management')
+    exp_group.add_argument('--name', type=str, default=None,
+                          help='Experiment name (auto-generated if not specified)')
+    exp_group.add_argument('--project', type=str, default='runs/segment',
+                          help='Project directory to save results')
+    exp_group.add_argument('--resume', type=str, default=None,
+                          help='Resume training from checkpoint')
+    exp_group.add_argument('--save-period', type=int, default=10,
+                          help='Save checkpoint every n epochs')
+    
+    # Validation and visualization
+    val_group = parser.add_argument_group('Validation and Visualization')
+    val_group.add_argument('--val', action='store_true', default=True,
+                          help='Validate during training')
+    val_group.add_argument('--save-json', action='store_true', default=True,
+                          help='Save results to JSON file')
+    val_group.add_argument('--plots', action='store_true', default=True,
+                          help='Generate training plots and mask visualizations')
+    val_group.add_argument('--save-hybrid', action='store_true',
+                          help='Save hybrid version of dataset labels')
+    val_group.add_argument('--cache', type=str, default=None, choices=['ram', 'disk'],
+                          help='Cache dataset in RAM or disk for faster training')
+    
+    return parser.parse_args()
+
+def validate_segmentation_arguments(args):
+    """Validate command line arguments for segmentation training."""
+    # Check if data file exists
+    if not os.path.exists(args.data):
+        raise FileNotFoundError(f"Segmentation dataset file not found: {args.data}")
+    
+    # Validate DINO arguments
+    if args.use_dino:
+        if not args.dino_variant and not args.dino_preprocessing:
+            raise ValueError("--dino-variant or --dino-preprocessing is required when --use-dino is specified")
+        
+        # Triple integration: preprocessing + backbone integration
+        if args.dino_variant and args.dino_preprocessing:
+            LOGGER.info("🚀 TRIPLE DINO INTEGRATION: Preprocessing (P0) + Backbone (P3+P4)")
+            LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} ({args.dino_integration})")
+            # This is now ALLOWED for maximum performance
+        
+        if args.dino_variant and not args.dino_integration:
+            LOGGER.warning(f"No --dino-integration specified, using default: single")
+    
+    # Handle DINO freezing logic
+    if args.unfreeze_dino:
+        args.freeze_dino = False
+        LOGGER.info("DINO weights will be trainable during training")
+    else:
+        args.freeze_dino = True
+        LOGGER.info("DINO weights will be frozen during training (recommended)")
+    
+    # Check GPU availability
+    if not torch.cuda.is_available() and args.device != 'cpu':
+        LOGGER.warning("CUDA not available, switching to CPU training")
+        args.device = 'cpu'
+    
+    # Validate segmentation-specific parameters
+    if args.mask_ratio < 1:
+        raise ValueError("--mask-ratio must be >= 1")
+    
+    return args
+
+def create_segmentation_experiment_name(args):
+    """Create experiment name for segmentation training."""
+    if args.name:
+        return args.name
+    
+    name_parts = [f"yolov12{args.model_size}", "seg"]
+    
+    if args.use_dino:
+        # Triple integration: preprocessing + backbone
+        if args.dino_preprocessing and args.dino_variant:
+            name_parts.extend(["dino3-triple", args.dino_variant, args.dino_integration])
+        # Preprocessing only
+        elif args.dino_preprocessing and not args.dino_variant:
+            name_parts.append("dino3-preprocess")
+        # Backbone integration only
+        elif args.dino_variant:
+            name_parts.extend(["dino3", args.dino_variant, args.dino_integration])
+    
+    return "-".join(name_parts)
+
+def setup_segmentation_training_parameters(args):
+    """Setup segmentation-specific training parameters."""
+    # Auto-determine batch size if not specified
+    if args.batch_size is None:
+        is_triple = args.dino_preprocessing and args.dino_variant
+        args.batch_size = get_segmentation_batch_size(
+            args.model_size, args.use_dino, args.dino_integration, is_triple
+        )
+        batch_type = "triple DINO" if is_triple else "DINO" if args.use_dino else "standard"
+        LOGGER.info(f"Auto-determined {batch_type} segmentation batch size: {args.batch_size}")
+    
+    # Auto-determine epochs if not specified
+    if args.epochs is None:
+        args.epochs = get_segmentation_epochs(args.use_dino)
+        LOGGER.info(f"Auto-determined segmentation epochs: {args.epochs}")
+    
+    # Adjust augmentation parameters for segmentation
+    if args.model_size in ['s', 'm', 'l', 'x']:
+        if args.model_size == 's':
+            args.mixup = max(args.mixup, 0.05)
+            args.copy_paste = max(args.copy_paste, 0.15)
+        elif args.model_size in ['m', 'l']:
+            args.mixup = max(args.mixup, 0.15)
+            args.copy_paste = max(args.copy_paste, 0.4)
+        elif args.model_size == 'x':
+            args.mixup = max(args.mixup, 0.2)
+            args.copy_paste = max(args.copy_paste, 0.6)
+    
+    return args
+
+def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_size, freeze_dino):
+    """
+    Modify segmentation config for DINO preprocessing approach.
+    """
+    if not dino_preprocessing:
+        return config_path
+    
+    # Load the YAML config
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    print("🔧 Configuring DINO3 Segmentation Preprocessing...")
+    
+    # Replace DINO_MODEL_NAME in backbone for preprocessing
+    if 'backbone' in config:
+        for i, layer in enumerate(config['backbone']):
+            if len(layer) >= 4 and isinstance(layer[3], list) and len(layer[3]) > 0:
+                if layer[3][0] == 'DINO_MODEL_NAME':
+                    config['backbone'][i][3][0] = dino_preprocessing
+                    config['backbone'][i][3][1] = freeze_dino  # Set freeze parameter
+                    config['backbone'][i][3][2] = 3  # DINO preprocessing outputs 3 channels
+                    print(f"   ✅ Replaced DINO_MODEL_NAME with {dino_preprocessing}")
+                    print(f"   🔧 DINO weights {'frozen' if freeze_dino else 'trainable'}")
+                    break
+    
+    # Ensure task is set to segment
+    config['task'] = 'segment'
+    
+    # Force the scale parameter
+    config['scale'] = model_size
+    print(f"   🔧 Set model scale: {model_size}")
+    print(f"   🎭 Task: instance segmentation")
+    
+    # Create temporary config file
+    temp_fd, temp_path = tempfile.mkstemp(suffix=f'_{model_size}_seg.yaml', prefix=f'yolov12{model_size}_dino_seg_')
+    with os.fdopen(temp_fd, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    
+    return temp_path
+
+def main():
+    """Main segmentation training function."""
+    print("🎭 YOLOv12 Instance Segmentation Training with DINO Enhancement")
+    print("=" * 70)
+    
+    # Parse and validate arguments
+    args = parse_segmentation_arguments()
+    args = validate_segmentation_arguments(args)
+    args = setup_segmentation_training_parameters(args)
+    
+    # Create segmentation model configuration path
+    model_config = create_segmentation_config_path(
+        args.model_size, args.use_dino, args.dino_variant, 
+        args.dino_integration, args.dino_preprocessing
+    )
+    
+    # Create experiment name
+    experiment_name = create_segmentation_experiment_name(args)
+    
+    # Print configuration summary
+    print(f"📊 Segmentation Training Configuration:")
+    print(f"   Task: Instance Segmentation")
+    print(f"   Model: YOLOv12{args.model_size}-seg")
+    if args.use_dino:
+        # Triple integration: preprocessing + backbone
+        if args.dino_preprocessing and args.dino_variant:
+            print(f"   DINO: 🚀 TRIPLE INTEGRATION")
+            print(f"         ├─ P0 (Preprocessing): {args.dino_preprocessing}")
+            print(f"         └─ P3+P4 (Backbone): {args.dino_variant} ({args.dino_integration}-scale)")
+        # Preprocessing only
+        elif args.dino_preprocessing and not args.dino_variant:
+            print(f"   DINO: Preprocessing with {args.dino_preprocessing}")
+        # Backbone integration only
+        elif args.dino_variant:
+            print(f"   DINO: {args.dino_variant} ({args.dino_integration}-scale)")
+        print(f"   DINO Weights: {'Frozen' if args.freeze_dino else 'Trainable'}")
+    else:
+        print(f"   DINO: None (Base YOLOv12 Segmentation)")
+    print(f"   Config: {model_config}")
+    print(f"   Dataset: {args.data}")
+    print(f"   Epochs: {args.epochs}")
+    print(f"   Batch Size: {args.batch_size}")
+    print(f"   Image Size: {args.imgsz}")
+    print(f"   Device: {args.device}")
+    print(f"   Experiment: {experiment_name}")
+    print(f"   Overlap Masks: {args.overlap_mask}")
+    print(f"   Mask Ratio: {args.mask_ratio}")
+    print()
+    
+    try:
+        # Modify config for DINO preprocessing if needed
+        temp_config_path = None
+        if args.dino_preprocessing:
+            temp_config_path = modify_segmentation_config_for_dino(
+                model_config, args.dino_preprocessing, args.model_size, args.freeze_dino
+            )
+            if temp_config_path != model_config:
+                model_config = temp_config_path
+        
+        # Load segmentation model
+        print(f"🔧 Loading segmentation model: {model_config}")
+        model = YOLO(model_config)
+        
+        # Start segmentation training
+        print("🏋️  Starting instance segmentation training...")
+        results = model.train(
+            data=args.data,
+            task=args.task,
+            epochs=args.epochs,
+            batch=args.batch_size,
+            imgsz=args.imgsz,
+            device=args.device,
+            workers=args.workers,
+            project=args.project,
+            name=experiment_name,
+            
+            # Segmentation-specific parameters
+            overlap_mask=args.overlap_mask,
+            mask_ratio=args.mask_ratio,
+            single_cls=args.single_cls,
+            
+            # Loss parameters
+            box=args.box_loss_gain,
+            cls=args.cls_loss_gain,
+            dfl=args.dfl_loss_gain,
+            
+            # Optimization parameters
+            lr0=args.lr,
+            weight_decay=args.weight_decay,
+            momentum=args.momentum,
+            warmup_epochs=args.warmup_epochs,
+            patience=args.patience,
+            
+            # Augmentation parameters
+            hsv_h=args.hsv_h,
+            hsv_s=args.hsv_s,
+            hsv_v=args.hsv_v,
+            degrees=args.degrees,
+            translate=args.translate,
+            scale=args.scale,
+            shear=args.shear,
+            perspective=args.perspective,
+            flipud=args.flipud,
+            fliplr=args.fliplr,
+            mosaic=args.mosaic,
+            mixup=args.mixup,
+            copy_paste=args.copy_paste,
+            
+            # Experiment parameters
+            resume=args.resume,
+            save_period=args.save_period,
+            cache=args.cache,
+            
+            # Validation and visualization
+            val=args.val,
+            save_json=args.save_json,
+            save_hybrid=args.save_hybrid,
+            plots=args.plots,
+            verbose=True
+        )
+        
+        print("🎉 Segmentation training completed successfully!")
+        print(f"📁 Results saved in: {args.project}/{experiment_name}")
+        
+        # Print final segmentation metrics
+        if hasattr(results, 'results_dict'):
+            metrics = results.results_dict
+            print(f"📊 Final Segmentation Metrics:")
+            for key, value in metrics.items():
+                if 'mask' in key.lower() or 'map' in key.lower():
+                    print(f"   {key}: {value:.4f}")
+    
+    except KeyboardInterrupt:
+        print("\n⚠️  Segmentation training interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ Segmentation training failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+    
+    finally:
+        # Cleanup temporary config file if created
+        if 'temp_config_path' in locals() and temp_config_path and os.path.exists(temp_config_path):
+            try:
+                os.unlink(temp_config_path)
+                print(f"🗑️  Cleaned up temporary config file")
+            except Exception:
+                pass
+
+if __name__ == '__main__':
+    main()
