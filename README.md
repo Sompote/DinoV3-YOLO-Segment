@@ -16,9 +16,10 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 
 - 🎭 **Instance Segmentation**: Pixel-perfect mask prediction with 32 prototypes
 - 🏗️ **Complete Model Family**: 5 sizes (nano, small, medium, large, x-large) × 4 variants = 20 models
-- 🔬 **DINO Integration**: Multiple DINOv3 enhancement strategies for improved feature extraction
+- 🔬 **DINO Integration**: Multiple DINOv3 enhancement strategies including **Triple Integration** (P0+P3+P4)
 - 📐 **Precise Masks**: Advanced segmentation head with prototype-based mask generation
 - ⚡ **Optimized Performance**: Balanced speed/accuracy across different model sizes
+- 🚀 **Fast Training**: 50-100x faster validation with smart optimization strategies
 - 🛠️ **Production Ready**: Easy deployment and training on custom segmentation datasets
 
 ## 📊 Model Variants
@@ -29,6 +30,7 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 | **Single-Scale** | DINO at P4 feature level | 5 variants | P4 enhancement | Enhanced Masks |
 | **Dual-Scale** | DINO at P3 and P4 levels | 5 variants | P3 + P4 enhancement | Multi-scale Masks |
 | **Preprocessing** | DINO at input level | 5 variants | Input preprocessing | Refined Masks |
+| **🚀 Triple** | Ultimate performance | 5 variants | P0 + P3 + P4 enhancement | Maximum Masks |
 
 ### 🏆 Segmentation Performance Specifications
 
@@ -132,6 +134,42 @@ python train_yolov12_segmentation.py \
     --dino-integration dual
 ```
 
+### ⚡ Fast Training with Optimized Validation
+
+```bash
+# Fast training for development (25x faster validation)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-variant vitb16 \
+    --dino-integration single \
+    --val-period 5 \
+    --val-split 0.2 \
+    --fast-val
+
+# Ultra-fast experimentation (100x faster validation)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --val-period 10 \
+    --val-split 0.1 \
+    --fast-val \
+    --epochs 100
+
+# Production training with balanced validation
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-preprocessing dinov3_vitb16 \
+    --dino-variant vitl16 \
+    --dino-integration dual \
+    --val-period 5 \
+    --val-split 0.3 \
+    --epochs 300
+```
+
 ### Enhanced Segmentation Inference
 
 ```python
@@ -186,12 +224,67 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 | Category | Arguments | Description |
 |----------|-----------|-------------|
 | **Required** | `--data`, `--model-size` | Dataset YAML and model size (n/s/m/l/x) |
-| **DINO** | `--use-dino`, `--dino-variant`, `--dino-integration` | DINO enhancement options |
+| **DINO** | `--use-dino`, `--dino-variant`, `--dino-integration`, `--dino-preprocessing` | DINO enhancement options |
+| **Fast Validation** | `--val-period`, `--val-split`, `--fast-val` | Speed optimization (25-100x faster) |
 | **Segmentation** | `--overlap-mask`, `--mask-ratio`, `--box-loss-gain` | Segmentation-specific parameters |
 | **Training** | `--epochs`, `--batch-size`, `--lr`, `--device` | Core training configuration |
 | **Experiment** | `--name`, `--project`, `--resume` | Experiment management |
 
-**📖 Complete Documentation**: See [SEGMENTATION_CLI_GUIDE.md](SEGMENTATION_CLI_GUIDE.md) for comprehensive CLI reference.
+**📖 Complete Documentation**: 
+- [SEGMENTATION_CLI_GUIDE.md](SEGMENTATION_CLI_GUIDE.md) - Comprehensive CLI reference with all options
+- [FAST_VALIDATION_GUIDE.md](FAST_VALIDATION_GUIDE.md) - Speed optimization strategies and best practices
+
+## 🚀 Performance Optimization
+
+### Validation Speed Optimization
+
+Training can be dramatically sped up with smart validation strategies:
+
+```bash
+# 🎯 Development Phase: Ultra-fast iteration (100x faster validation)
+python train_yolov12_segmentation.py \
+    --data your_data.yaml \
+    --model-size s \
+    --val-period 10 \
+    --val-split 0.1 \
+    --fast-val \
+    --epochs 100
+
+# 🏭 Production Phase: Balanced performance (25x faster validation)  
+python train_yolov12_segmentation.py \
+    --data your_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitb16 \
+    --dino-integration dual \
+    --val-period 5 \
+    --val-split 0.2 \
+    --fast-val \
+    --epochs 300
+
+# 🎓 Final Training: Full validation for best results
+python train_yolov12_segmentation.py \
+    --data your_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-preprocessing dinov3_vitb16 \
+    --dino-variant vitl16 \
+    --dino-integration dual \
+    --val-period 2 \
+    --plots \
+    --save-json \
+    --epochs 300
+```
+
+### Speed Optimization Tips
+
+| Strategy | Speed Gain | Best For |
+|----------|------------|----------|
+| `--val-period 10` | **10x faster** | Long experiments, development |
+| `--val-split 0.2` | **5x faster** | Large datasets |
+| `--fast-val` | **2-3x faster** | Quick iterations |
+| `--cache ram` | **20-50% faster** | Systems with sufficient RAM |
+| **Combined** | **50-100x faster** | Rapid experimentation |
 
 ## 📁 Model Architecture
 
