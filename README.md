@@ -261,6 +261,7 @@ python train_yolov12_segmentation.py \
     --val-period 10 \
     --val-split 0.1 \
     --fast-val \
+    --patience 15 \
     --epochs 100
 
 # 🏭 Production Phase: Balanced performance (25x faster validation)  
@@ -273,6 +274,7 @@ python train_yolov12_segmentation.py \
     --val-period 5 \
     --val-split 0.2 \
     --fast-val \
+    --patience 25 \
     --epochs 300
 
 # 🎓 Final Training: Full validation for best results
@@ -284,20 +286,22 @@ python train_yolov12_segmentation.py \
     --dino-variant vitl16 \
     --dino-integration dual \
     --val-period 2 \
+    --patience 50 \
     --plots \
     --save-json \
     --epochs 300
 ```
 
-### Speed Optimization Tips
+### Training Optimization Tips
 
-| Strategy | Speed Gain | Best For |
-|----------|------------|----------|
-| `--val-period 10` | **10x faster** | Long experiments, development |
-| `--val-split 0.2` | **5x faster** | Large datasets |
-| `--fast-val` | **2-3x faster** | Quick iterations |
-| `--cache ram` | **20-50% faster** | Systems with sufficient RAM |
-| **Combined** | **50-100x faster** | Rapid experimentation |
+| Strategy | Speed Gain | Best For | Example |
+|----------|------------|----------|---------|
+| `--val-period 10` | **10x faster** | Long experiments, development | Skip validation 9/10 epochs |
+| `--val-split 0.2` | **5x faster** | Large datasets | Use 20% of validation data |
+| `--fast-val` | **2-3x faster** | Quick iterations | Simplified metrics |
+| `--patience 20` | **Early stopping** | Prevent overfitting | Stop if no improvement for 20 epochs |
+| `--cache ram` | **20-50% faster** | Systems with sufficient RAM | Cache dataset in memory |
+| **Combined** | **50-100x faster** | Rapid experimentation | Use all strategies together |
 
 ## 📁 Repository Structure
 
@@ -377,8 +381,8 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 # DINO-enhanced training (recommended)
 python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dino-integration single
 
-# Advanced configuration
-python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dino-integration dual --epochs 150 --batch-size 8 --name my-experiment
+# Advanced configuration with early stopping
+python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dino-integration dual --epochs 150 --batch-size 8 --patience 20 --name my-experiment
 ```
 
 ### Key CLI Arguments
@@ -389,7 +393,7 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 | **DINO** | `--use-dino`, `--dino-variant`, `--dino-integration`, `--dino-preprocessing` | DINO enhancement options |
 | **Fast Validation** | `--val-period`, `--val-split`, `--fast-val` | Speed optimization (25-100x faster) |
 | **Segmentation** | `--overlap-mask`, `--mask-ratio`, `--box-loss-gain` | Segmentation-specific parameters |
-| **Training** | `--epochs`, `--batch-size`, `--lr`, `--device` | Core training configuration |
+| **Training** | `--epochs`, `--batch-size`, `--lr`, `--device`, `--patience` | Core training configuration |
 | **Experiment** | `--name`, `--project`, `--resume` | Experiment management |
 
 ## 🎯 DINO Integration Strategies
