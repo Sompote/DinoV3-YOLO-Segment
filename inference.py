@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
-YOLOv12-DINO Inference Script
+YOLOv12-DINO Segmentation Inference Script
 
-This script performs object detection on images using trained YOLOv12-DINO model weights.
-It can process single images, image directories, or image lists and generate annotated outputs.
+This script performs instance segmentation on images using trained YOLOv12-DINO segmentation model weights.
+It can process single images, image directories, or image lists and generate annotated outputs with precise masks.
 
 Usage:
     python inference.py --weights path/to/model.pt --source path/to/images --output path/to/output
-    python inference.py --weights runs/detect/train/weights/best.pt --source test_images/ --output results/
+    python inference.py --weights runs/segment/train/weights/best.pt --source test_images/ --output results/
     python inference.py --weights best.pt --source image.jpg --conf 0.5 --iou 0.7 --save --show
 
 Features:
+    - Instance segmentation with pixel-perfect masks
     - Supports multiple input formats (single image, directory, image list)
     - Configurable confidence and IoU thresholds
-    - Optional visualization and saving of annotated images
-    - Batch processing for efficient inference
+    - Optional visualization and saving of annotated images with masks
+    - Batch processing for efficient segmentation inference
     - Support for various image formats (jpg, png, bmp, etc.)
+    - Mask visualization and export options
 """
 
 import argparse
@@ -40,8 +42,8 @@ except ImportError as e:
     sys.exit(1)
 
 
-class YOLOInference:
-    """YOLOv12-DINO inference class for object detection on images."""
+class YOLOSegmentationInference:
+    """YOLOv12-DINO inference class for instance segmentation on images."""
 
     def __init__(
         self,
@@ -53,11 +55,11 @@ class YOLOInference:
         verbose: bool = True
     ):
         """
-        Initialize the YOLOv12-DINO inference model.
+        Initialize the YOLOv12-DINO segmentation model.
 
         Args:
-            weights (str | Path): Path to the trained model weights (.pt file)
-            conf (float): Confidence threshold for detection (0.0-1.0)
+            weights (str | Path): Path to the trained segmentation model weights (.pt file)
+            conf (float): Confidence threshold for instance detection (0.0-1.0)
             iou (float): IoU threshold for Non-Maximum Suppression (0.0-1.0)
             imgsz (int): Input image size for inference
             device (str): Device to run inference on ('cpu', 'cuda', 'mps', etc.)
@@ -76,15 +78,19 @@ class YOLOInference:
 
         # Load model
         if self.verbose:
-            LOGGER.info(f"Loading YOLOv12-DINO model from {self.weights}")
+            LOGGER.info(f"Loading YOLOv12-DINO segmentation model from {self.weights}")
         
         self.model = YOLO(str(self.weights), verbose=self.verbose)
         
         if self.verbose:
-            LOGGER.info(f"Model loaded successfully")
+            LOGGER.info(f"Segmentation model loaded successfully")
             LOGGER.info(f"Model task: {self.model.task}")
             if hasattr(self.model.model, 'names'):
                 LOGGER.info(f"Classes: {list(self.model.model.names.values())}")
+                
+        # Verify this is a segmentation model
+        if hasattr(self.model, 'task') and self.model.task != 'segment':
+            LOGGER.warning(f"Model task is '{self.model.task}' but expected 'segment'. Results may be unexpected.")
 
     def predict_single(
         self,
@@ -94,22 +100,24 @@ class YOLOInference:
         save_txt: bool = False,
         save_conf: bool = False,
         save_crop: bool = False,
+        save_masks: bool = False,
         output_dir: Union[str, Path] = None
     ):
         """
-        Perform inference on a single image source.
+        Perform segmentation inference on a single image source.
 
         Args:
             source (str | Path): Path to image file
-            save (bool): Save annotated images
-            show (bool): Display results
-            save_txt (bool): Save detection results to txt files
+            save (bool): Save annotated images with masks
+            show (bool): Display segmentation results
+            save_txt (bool): Save segmentation results to txt files
             save_conf (bool): Save confidence scores in txt files
-            save_crop (bool): Save cropped detection images
+            save_crop (bool): Save cropped instance images
+            save_masks (bool): Save instance masks as separate images
             output_dir (str | Path): Output directory for saved results
 
         Returns:
-            List of Results objects containing detection results
+            List of Results objects containing segmentation results with masks
         """
         # Prepare prediction arguments
         predict_args = {
@@ -124,6 +132,10 @@ class YOLOInference:
             'save_crop': save_crop,
             'verbose': self.verbose
         }
+        
+        # Add segmentation-specific parameters
+        if save_masks:
+            predict_args['save_masks'] = save_masks
 
         if self.device:
             predict_args['device'] = self.device
@@ -144,24 +156,26 @@ class YOLOInference:
         save_txt: bool = False,
         save_conf: bool = False,
         save_crop: bool = False,
+        save_masks: bool = False,
         output_dir: Union[str, Path] = None,
         extensions: tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif')
     ):
         """
-        Perform batch inference on all images in a directory.
+        Perform batch segmentation inference on all images in a directory.
 
         Args:
             source_dir (str | Path): Directory containing images
-            save (bool): Save annotated images
-            show (bool): Display results
-            save_txt (bool): Save detection results to txt files
+            save (bool): Save annotated images with masks
+            show (bool): Display segmentation results
+            save_txt (bool): Save segmentation results to txt files
             save_conf (bool): Save confidence scores in txt files
-            save_crop (bool): Save cropped detection images
+            save_crop (bool): Save cropped instance images
+            save_masks (bool): Save instance masks as separate images
             output_dir (str | Path): Output directory for saved results
             extensions (tuple): Supported image file extensions
 
         Returns:
-            List of Results objects containing detection results for all images
+            List of Results objects containing segmentation results for all images
         """
         source_dir = Path(source_dir)
         if not source_dir.exists():
@@ -192,6 +206,10 @@ class YOLOInference:
             'save_crop': save_crop,
             'verbose': self.verbose
         }
+        
+        # Add segmentation-specific parameters
+        if save_masks:
+            predict_args['save_masks'] = save_masks
 
         if self.device:
             predict_args['device'] = self.device
@@ -212,22 +230,24 @@ class YOLOInference:
         save_txt: bool = False,
         save_conf: bool = False,
         save_crop: bool = False,
+        save_masks: bool = False,
         output_dir: Union[str, Path] = None
     ):
         """
-        Perform inference on a list of image paths.
+        Perform segmentation inference on a list of image paths.
 
         Args:
             image_list (List[str | Path]): List of image file paths
-            save (bool): Save annotated images
-            show (bool): Display results
-            save_txt (bool): Save detection results to txt files
+            save (bool): Save annotated images with masks
+            show (bool): Display segmentation results
+            save_txt (bool): Save segmentation results to txt files
             save_conf (bool): Save confidence scores in txt files
-            save_crop (bool): Save cropped detection images
+            save_crop (bool): Save cropped instance images
+            save_masks (bool): Save instance masks as separate images
             output_dir (str | Path): Output directory for saved results
 
         Returns:
-            List of Results objects containing detection results for all images
+            List of Results objects containing segmentation results for all images
         """
         all_results = []
 
@@ -243,6 +263,7 @@ class YOLOInference:
                 save_txt=save_txt,
                 save_conf=save_conf,
                 save_crop=save_crop,
+                save_masks=save_masks,
                 output_dir=output_dir
             )
             all_results.extend(results)
@@ -250,47 +271,60 @@ class YOLOInference:
         return all_results
 
     def print_results_summary(self, results, source_info: str = ""):
-        """Print a summary of detection results."""
+        """Print a summary of segmentation results."""
         if not results:
             LOGGER.info(f"No results to display{f' for {source_info}' if source_info else ''}")
             return
 
-        total_detections = sum(len(r.boxes) if r.boxes is not None else 0 for r in results)
+        total_instances = sum(len(r.boxes) if r.boxes is not None else 0 for r in results)
+        total_masks = sum(len(r.masks.data) if r.masks is not None else 0 for r in results)
         
         if self.verbose:
-            LOGGER.info(f"\n{colorstr('Results Summary')}{f' for {source_info}' if source_info else ''}:")
+            LOGGER.info(f"\n{colorstr('Segmentation Results Summary')}{f' for {source_info}' if source_info else ''}:")
             LOGGER.info(f"  Images processed: {len(results)}")
-            LOGGER.info(f"  Total detections: {total_detections}")
+            LOGGER.info(f"  Total instances: {total_instances}")
+            LOGGER.info(f"  Total masks generated: {total_masks}")
 
-            if hasattr(self.model.model, 'names') and total_detections > 0:
-                # Count detections per class
+            if hasattr(self.model.model, 'names') and total_instances > 0:
+                # Count instances per class
                 class_counts = {}
+                mask_counts = {}
+                
                 for result in results:
                     if result.boxes is not None:
                         for cls in result.boxes.cls:
                             cls_name = self.model.model.names[int(cls)]
                             class_counts[cls_name] = class_counts.get(cls_name, 0) + 1
+                    
+                    if result.masks is not None:
+                        for i, cls in enumerate(result.boxes.cls if result.boxes is not None else []):
+                            cls_name = self.model.model.names[int(cls)]
+                            mask_counts[cls_name] = mask_counts.get(cls_name, 0) + 1
                 
-                LOGGER.info("  Detections by class:")
+                LOGGER.info("  Instances by class:")
                 for cls_name, count in sorted(class_counts.items()):
-                    LOGGER.info(f"    {cls_name}: {count}")
+                    mask_count = mask_counts.get(cls_name, 0)
+                    LOGGER.info(f"    {cls_name}: {count} instances ({mask_count} masks)")
 
 
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="YOLOv12-DINO Inference Script",
+        description="YOLOv12-DINO Segmentation Inference Script",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Single image inference
+    # Single image segmentation
     python inference.py --weights best.pt --source image.jpg --save --show
 
-    # Batch inference on directory
-    python inference.py --weights runs/detect/train/weights/best.pt --source test_images/ --output results/
+    # Batch segmentation on directory
+    python inference.py --weights runs/segment/train/weights/best.pt --source test_images/ --output results/
 
-    # Custom thresholds and save options
-    python inference.py --weights model.pt --source images/ --conf 0.5 --iou 0.7 --save-txt --save-crop
+    # Custom thresholds and save options with masks
+    python inference.py --weights model.pt --source images/ --conf 0.5 --iou 0.7 --save-txt --save-masks
+
+    # Complete segmentation output
+    python inference.py --weights model.pt --source image.jpg --save --save-masks --save-crop --show
         """
     )
 
@@ -298,7 +332,7 @@ Examples:
         '--weights', '-w',
         type=str,
         required=True,
-        help='Path to trained model weights (.pt file)'
+        help='Path to trained segmentation model weights (.pt file)'
     )
 
     parser.add_argument(
@@ -312,14 +346,14 @@ Examples:
         '--output', '-o',
         type=str,
         default=None,
-        help='Output directory for results (default: runs/detect/predict)'
+        help='Output directory for results (default: runs/segment/predict)'
     )
 
     parser.add_argument(
         '--conf',
         type=float,
         default=0.25,
-        help='Confidence threshold for detection (default: 0.25)'
+        help='Confidence threshold for instance detection (default: 0.25)'
     )
 
     parser.add_argument(
@@ -346,19 +380,19 @@ Examples:
     parser.add_argument(
         '--save',
         action='store_true',
-        help='Save annotated images'
+        help='Save annotated images with segmentation masks'
     )
 
     parser.add_argument(
         '--show',
         action='store_true',
-        help='Display results'
+        help='Display segmentation results'
     )
 
     parser.add_argument(
         '--save-txt',
         action='store_true',
-        help='Save detection results to txt files'
+        help='Save segmentation results to txt files'
     )
 
     parser.add_argument(
@@ -370,7 +404,13 @@ Examples:
     parser.add_argument(
         '--save-crop',
         action='store_true',
-        help='Save cropped detection images'
+        help='Save cropped instance images'
+    )
+
+    parser.add_argument(
+        '--save-masks',
+        action='store_true',
+        help='Save instance masks as separate images'
     )
 
     parser.add_argument(
@@ -384,12 +424,12 @@ Examples:
 
 
 def main():
-    """Main inference function."""
+    """Main segmentation inference function."""
     args = parse_arguments()
 
     try:
-        # Initialize inference model
-        inference = YOLOInference(
+        # Initialize segmentation inference model
+        inference = YOLOSegmentationInference(
             weights=args.weights,
             conf=args.conf,
             iou=args.iou,
@@ -403,9 +443,9 @@ def main():
         start_time = time.time()
 
         if source_path.is_file():
-            # Single image inference
+            # Single image segmentation
             if args.verbose:
-                LOGGER.info(f"Running inference on single image: {source_path}")
+                LOGGER.info(f"Running segmentation inference on single image: {source_path}")
             
             results = inference.predict_single(
                 source=source_path,
@@ -414,15 +454,16 @@ def main():
                 save_txt=args.save_txt,
                 save_conf=args.save_conf,
                 save_crop=args.save_crop,
+                save_masks=args.save_masks,
                 output_dir=args.output
             )
             
             inference.print_results_summary(results, str(source_path))
 
         elif source_path.is_dir():
-            # Directory batch inference
+            # Directory batch segmentation
             if args.verbose:
-                LOGGER.info(f"Running batch inference on directory: {source_path}")
+                LOGGER.info(f"Running batch segmentation inference on directory: {source_path}")
             
             results = inference.predict_batch(
                 source_dir=source_path,
@@ -431,6 +472,7 @@ def main():
                 save_txt=args.save_txt,
                 save_conf=args.save_conf,
                 save_crop=args.save_crop,
+                save_masks=args.save_masks,
                 output_dir=args.output
             )
             
@@ -442,10 +484,10 @@ def main():
         # Print timing information
         end_time = time.time()
         if args.verbose:
-            LOGGER.info(f"\nInference completed in {end_time - start_time:.2f} seconds")
+            LOGGER.info(f"\nSegmentation inference completed in {end_time - start_time:.2f} seconds")
 
     except Exception as e:
-        LOGGER.error(f"Error during inference: {e}")
+        LOGGER.error(f"Error during segmentation inference: {e}")
         sys.exit(1)
 
 
