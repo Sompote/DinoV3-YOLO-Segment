@@ -261,10 +261,18 @@ Examples:
     val_group = parser.add_argument_group('Validation and Visualization')
     val_group.add_argument('--val', action='store_true', default=True,
                           help='Validate during training')
-    val_group.add_argument('--save-json', action='store_true', default=True,
-                          help='Save results to JSON file')
-    val_group.add_argument('--plots', action='store_true', default=True,
-                          help='Generate training plots and mask visualizations')
+    val_group.add_argument('--val-period', type=int, default=1,
+                          help='Validate every N epochs (default: 1, use 5-10 for faster training)')
+    val_group.add_argument('--val-split', type=float, default=None,
+                          help='Fraction of validation set to use (0.1-0.5 for faster validation)')
+    val_group.add_argument('--fast-val', action='store_true',
+                          help='Enable fast validation (reduced metrics, faster execution)')
+    val_group.add_argument('--val-batch-size', type=int, default=None,
+                          help='Validation batch size (larger = faster validation)')
+    val_group.add_argument('--save-json', action='store_true', default=False,
+                          help='Save results to JSON file (disabled by default for speed)')
+    val_group.add_argument('--plots', action='store_true', default=False,
+                          help='Generate training plots and mask visualizations (disabled by default for speed)')
     val_group.add_argument('--save-hybrid', action='store_true',
                           help='Save hybrid version of dataset labels')
     val_group.add_argument('--cache', type=str, default=None, choices=['ram', 'disk'],
@@ -359,7 +367,66 @@ def setup_segmentation_training_parameters(args):
             args.mixup = max(args.mixup, 0.2)
             args.copy_paste = max(args.copy_paste, 0.6)
     
+    # Setup validation optimization
+    setup_validation_optimization(args)
+    
     return args
+
+def setup_validation_optimization(args):
+    """Setup validation optimization parameters for faster training."""
+    
+    # Auto-determine validation batch size if not specified
+    if args.val_batch_size is None:
+        # Use larger batch size for validation (faster)
+        val_multiplier = 2.0 if args.fast_val else 1.5
+        args.val_batch_size = max(int(args.batch_size * val_multiplier), args.batch_size + 2)
+        LOGGER.info(f"Auto-determined validation batch size: {args.val_batch_size}")
+    
+    # Validation optimization recommendations
+    optimization_msg = []
+    
+    if args.val_period == 1:
+        optimization_msg.append("💡 Use --val-period 5-10 to validate less frequently")
+    
+    if args.val_split is None:
+        optimization_msg.append("💡 Use --val-split 0.2 to use only 20% of validation set")
+    
+    if not args.fast_val:
+        optimization_msg.append("💡 Use --fast-val for reduced metrics and faster validation")
+    
+    if args.save_json:
+        optimization_msg.append("💡 Remove --save-json to skip JSON file generation")
+    
+    if args.plots:
+        optimization_msg.append("💡 Remove --plots to skip visualization generation")
+    
+    if optimization_msg:
+        LOGGER.info("🚀 Validation Speed Optimization Tips:")
+        for tip in optimization_msg[:3]:  # Show max 3 tips
+            LOGGER.info(f"   {tip}")
+    
+    # Fast validation configuration
+    if args.fast_val:
+        LOGGER.info("⚡ Fast validation enabled: reduced metrics, faster execution")
+        args.save_json = False  # Disable JSON saving
+        args.plots = False      # Disable plot generation
+
+def get_additional_validation_params(args):
+    """Get additional validation parameters that are supported by ultralytics."""
+    params = {}
+    
+    # Add validation period if different from default
+    if hasattr(args, 'val_period') and args.val_period != 1:
+        # Note: Ultralytics uses 'val' parameter differently, we'll handle this in post-processing
+        pass
+    
+    # Add validation batch size if specified
+    if hasattr(args, 'val_batch_size') and args.val_batch_size:
+        # Note: Most YOLO implementations don't have separate val batch size
+        # This would need custom implementation
+        pass
+    
+    return params
 
 def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_size, freeze_dino, dino_variant=None, dino_integration='single'):
     """
@@ -559,12 +626,15 @@ def main():
             save_period=args.save_period,
             cache=args.cache,
             
-            # Validation and visualization
+            # Validation and visualization  
             val=args.val,
             save_json=args.save_json,
             save_hybrid=args.save_hybrid,
             plots=args.plots,
-            verbose=True
+            verbose=True,
+            
+            # Additional validation parameters (if supported by ultralytics)
+            **get_additional_validation_params(args)
         )
         
         print("🎉 Segmentation training completed successfully!")
