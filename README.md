@@ -898,23 +898,6 @@ results = model.train(
 
 ## 🔍 Inference & Prediction
 
-### 🖥️ **Interactive Gradio Web Interface**
-
-Launch the **web-based interface** for easy image upload and real-time instance segmentation:
-
-```bash
-# Start Gradio web interface
-python app.py
-
-# Access the interface at: http://localhost:7860
-```
-
-**Features:**
-- 📁 **Model Loading**: Upload any `.pt` weights file through the web interface
-- 🖼️ **Image Upload**: Drag and drop images for instant segmentation
-- ⚙️ **Real-time Parameters**: Adjust confidence, IoU thresholds, and image size
-- 📊 **Detailed Results**: View segmentation masks with confidence scores and class names
-- 🎯 **Device Selection**: Choose between CPU, CUDA, or MPS
 
 ### 📝 **Command Line Inference**
 
@@ -1060,32 +1043,6 @@ model.export(format="engine", half=True)  # or format="onnx"
 ```
 
 
-## 🖥️ Interactive Demo
-
-### 🚀 **Gradio Web Interface**
-
-Launch the interactive web interface for real-time instance segmentation:
-
-```bash
-# Start the Gradio web application
-python app.py
-
-# Open your browser and visit: http://localhost:7860
-```
-
-**Web Interface Features:**
-- 📤 **Easy Upload**: Drag and drop model weights (.pt files) and images
-- 🎛️ **Real-time Controls**: Adjust confidence, IoU thresholds, and image size with sliders
-- 🖼️ **Instant Results**: See segmentation results with instance masks and confidence scores
-- 📊 **Detailed Output**: View complete segmentation statistics and instance counts
-- ⚙️ **Device Selection**: Choose between CPU, CUDA, and MPS acceleration
-- 🔄 **Auto-refresh**: Results update automatically when parameters change
-
-**Perfect for:**
-- 🎓 **Demonstrations**: Show model capabilities to stakeholders
-- 🧪 **Testing**: Quick evaluation of different models and parameters
-- 🎨 **Prototyping**: Rapid iteration without command-line complexity
-- 📱 **User-friendly**: No technical knowledge required
 
 ## 🧬 Official DINOv3 Integration
 
