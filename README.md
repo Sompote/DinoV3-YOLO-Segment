@@ -48,8 +48,8 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/yolo12seg.git
-cd yolo12seg
+git clone https://github.com/Sompote/DinoV3-YOLO-Segment.git
+cd DinoV3-YOLO-Segment
 
 # Install dependencies
 pip install -r requirements.txt
@@ -661,12 +661,12 @@ python test_dino3_variants.py \
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Sompote/DINOV3-YOLOV12.git
-cd DINOV3-YOLOV12
+git clone https://github.com/Sompote/DinoV3-YOLO-Segment.git
+cd DinoV3-YOLO-Segment
 
 # 2. Create conda environment
-conda create -n dinov3-yolov12 python=3.11
-conda activate dinov3-yolov12
+conda create -n yolov12-segment python=3.11
+conda activate yolov12-segment
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -674,13 +674,14 @@ pip install transformers  # For DINOv3 models
 pip install -e .
 
 # 4. Verify installation
-python -c "from ultralytics.nn.modules.block import DINO3Backbone; print('✅ DINOv3-YOLOv12 ready!')"
+python -c "from ultralytics.nn.modules.block import DINO3Backbone; print('✅ YOLOv12 Segmentation ready!')"
 
 # 5. Quick test (recommended)
-python train_yolov12_dino.py \
-    --data coco.yaml \
-    --yolo-size s \
-    --dino-input dinov3_vitb16 \
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-preprocessing dinov3_vitb16 \
     --epochs 1 \
     --name quick_test
 ```
@@ -689,10 +690,10 @@ python train_yolov12_dino.py \
 
 ```bash
 # For experienced users - complete setup and test in one go
-git clone https://github.com/Sompote/DINOV3-YOLOV12.git && \
-cd DINOV3-YOLOV12 && \
-conda create -n dinov3-yolov12 python=3.11 -y && \
-conda activate dinov3-yolov12 && \
+git clone https://github.com/Sompote/DinoV3-YOLO-Segment.git && \
+cd DinoV3-YOLO-Segment && \
+conda create -n yolov12-segment python=3.11 -y && \
+conda activate yolov12-segment && \
 pip install -r requirements.txt transformers && \
 pip install -e . && \
 echo "✅ Setup complete! Run: python train_yolov12_segmentation.py --help"
@@ -703,8 +704,8 @@ echo "✅ Setup complete! Run: python train_yolov12_segmentation.py --help"
 ### 🔧 **Standard Installation (Alternative)**
 ```bash
 wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu11torch2.2cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
-conda create -n yolov12 python=3.11
-conda activate yolov12
+conda create -n yolov12-segment python=3.11
+conda activate yolov12-segment
 pip install -r requirements.txt
 pip install transformers  # For DINOv3 models
 pip install -e .
@@ -1120,7 +1121,7 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
   author={AI Research Group, Department of Civil Engineering, KMUTT},
   journal={GitHub Repository},
   year={2024},
-  url={https://github.com/Sompote/DINOV3-YOLOV12}
+  url={https://github.com/Sompote/DinoV3-YOLO-Segment}
 }
 ```
 
@@ -1130,8 +1131,8 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
 
 ### 🌟 **Star us on GitHub!**
 
-[![GitHub stars](https://img.shields.io/github/stars/Sompote/DINOV3-YOLOV12?style=social)](https://github.com/Sompote/DINOV3-YOLOV12/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/Sompote/DINOV3-YOLOV12?style=social)](https://github.com/Sompote/DINOV3-YOLOV12/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/Sompote/DinoV3-YOLO-Segment?style=social)](https://github.com/Sompote/DinoV3-YOLO-Segment/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Sompote/DinoV3-YOLO-Segment?style=social)](https://github.com/Sompote/DinoV3-YOLO-Segment/network/members)
 
 **🚀 Revolutionizing Instance Segmentation with Systematic Vision Transformer Integration**
 
