@@ -338,6 +338,53 @@ python train_yolov12_segmentation.py \
 | `--cache ram` | **20-50% faster** | Systems with sufficient RAM |
 | **Combined** | **50-100x faster** | Rapid experimentation |
 
+## 📁 Repository Structure
+
+### 🎯 **Key Files and Scripts**
+
+| File | Description | Usage |
+|------|-------------|-------|
+| **Training Scripts** | | |
+| `train_yolov12_segmentation.py` | **Main segmentation training script** | CLI interface with fast validation |
+| `train_yolov12_dino.py` | DINO detection training script | For detection tasks |
+| **Inference & Demo** | | |
+| `inference.py` | **Segmentation inference script** | Batch processing with mask output |
+| `app.py` | Gradio web interface | Interactive demo |
+| **Documentation** | | |
+| `FAST_VALIDATION_GUIDE.md` | **Fast validation strategies** | Speed optimization guide |
+| `SEGMENTATION_CLI_GUIDE.md` | **Complete CLI reference** | All training parameters |
+| `README_SEGMENTATION.md` | Segmentation overview | Task-specific guide |
+| `DINO_FIX_DOCUMENTATION.md` | Technical fixes | Troubleshooting guide |
+
+### 🎭 **Segmentation Model Configs**
+
+| Model Size | Standard | DINO Single | DINO Dual | DINO Preprocessing |
+|------------|----------|-------------|-----------|-------------------|
+| **Nano** | `yolov12n-seg.yaml` | `yolov12n-dino3-vitb16-single-seg.yaml` | `yolov12n-dino3-vitb16-dual-seg.yaml` | `yolov12n-dino3-preprocess-seg.yaml` |
+| **Small** | `yolov12s-seg.yaml` | `yolov12s-dino3-vitb16-single-seg.yaml` | `yolov12s-dino3-vitb16-dual-seg.yaml` | `yolov12s-dino3-preprocess-seg.yaml` |
+| **Medium** | `yolov12m-seg.yaml` | `yolov12m-dino3-vitb16-single-seg.yaml` | `yolov12m-dino3-vitb16-dual-seg.yaml` | `yolov12m-dino3-preprocess-seg.yaml` |
+| **Large** | `yolov12l-seg.yaml` | `yolov12l-dino3-vitb16-single-seg.yaml` | `yolov12l-dino3-vitb16-dual-seg.yaml` | `yolov12l-dino3-preprocess-seg.yaml` |
+| **Extra** | `yolov12x-seg.yaml` | `yolov12x-dino3-vitb16-single-seg.yaml` | `yolov12x-dino3-vitb16-dual-seg.yaml` | `yolov12x-dino3-preprocess-seg.yaml` |
+
+### 📊 **Results & Assets**
+
+| Directory | Contents | Purpose |
+|-----------|----------|---------|
+| `runs/segment/` | Training results, weights, metrics | Model outputs |
+| `safety_test_results/` | Test images and predictions | Validation samples |
+| `assets/` | Architecture diagrams (SVG) | Technical documentation |
+| `logs/` | Training performance logs | Model benchmarks |
+
+### 🛠️ **Configuration Files**
+
+| File | Description |
+|------|-------------|
+| `requirements.txt` | Python dependencies |
+| `requirements_rtx5090.txt` | RTX 5090 specific requirements |
+| `pyproject.toml` | Project configuration |
+| `ultralytics/cfg/models/v12/` | All model architecture configs |
+| `ultralytics/cfg/datasets/` | Dataset configuration templates |
+
 ## 📁 Model Architecture
 
 ### Available Models
