@@ -303,6 +303,285 @@ python train_yolov12_segmentation.py \
 | `--cache ram` | **20-50% faster** | Systems with sufficient RAM | Cache dataset in memory |
 | **Combined** | **50-100x faster** | Rapid experimentation | Use all strategies together |
 
+## ⚙️ Advanced Training Hyperparameters
+
+### 📋 Complete Hyperparameter Reference
+
+All hyperparameters are configured through CLI arguments in `train_yolov12_segmentation.py` and default values from [`ultralytics/cfg/default.yaml`](ultralytics/cfg/default.yaml):
+
+#### 🎯 Core Training Parameters
+
+| Parameter | CLI Argument | Default | Range | Description |
+|-----------|--------------|---------|-------|-------------|
+| **Learning Rate Control** |
+| Initial LR | `--lr` | 0.01 | 0.0001-0.1 | Initial learning rate (SGD=1E-2, Adam=1E-3) |
+| Final LR Factor | N/A (default.yaml) | 0.01 | 0.001-0.1 | Final learning rate = lr0 × lrf |
+| Momentum | `--momentum` | 0.937 | 0.8-0.99 | SGD momentum / Adam beta1 |
+| Weight Decay | `--weight-decay` | 0.0005 | 0.0001-0.01 | L2 regularization strength |
+| **Warmup Strategy** |
+| Warmup Epochs | `--warmup-epochs` | 3 | 0-20 | Linear warmup duration |
+| Warmup Momentum | N/A (default.yaml) | 0.8 | 0.5-0.95 | Initial momentum during warmup |
+| Warmup Bias LR | N/A (default.yaml) | 0.0 | 0.0-0.1 | Bias learning rate during warmup |
+| **Training Control** |
+| Epochs | `--epochs` | auto | 50-1000 | Training duration |
+| Batch Size | `--batch-size` | auto | 1-128 | Samples per batch |
+| Patience | `--patience` | 10 | 5-200 | Early stopping patience |
+| Image Size | `--imgsz` | 640 | 320-1280 | Input resolution |
+
+#### 🎯 Loss Function Hyperparameters
+
+| Component | CLI Argument | Default | Range | Description |
+|-----------|--------------|---------|-------|-------------|
+| Box Loss | `--box-loss-gain` | 7.5 | 1.0-20.0 | Bounding box regression weight |
+| Classification Loss | `--cls-loss-gain` | 0.5 | 0.1-2.0 | Class prediction weight |
+| DFL Loss | `--dfl-loss-gain` | 1.5 | 0.5-5.0 | Distribution Focal Loss weight |
+
+#### 🎨 Data Augmentation Parameters
+
+| Category | CLI Argument | Default | Range | Description |
+|----------|--------------|---------|-------|-------------|
+| **Color Augmentation** |
+| HSV Hue | `--hsv-h` | 0.015 | 0.0-0.1 | Hue shift range |
+| HSV Saturation | `--hsv-s` | 0.7 | 0.0-1.0 | Saturation scaling |
+| HSV Value | `--hsv-v` | 0.4 | 0.0-1.0 | Brightness scaling |
+| **Geometric Augmentation** |
+| Rotation | `--degrees` | 0.0 | 0.0-45.0 | Random rotation degrees |
+| Translation | `--translate` | 0.1 | 0.0-0.5 | Position shift fraction |
+| Scaling | `--scale` | 0.5 | 0.0-1.0 | Size variation range |
+| Shearing | `--shear` | 0.0 | 0.0-20.0 | Shear transformation |
+| Perspective | `--perspective` | 0.0 | 0.0-0.001 | Perspective distortion |
+| **Flip Augmentation** |
+| Vertical Flip | `--flipud` | 0.0 | 0.0-1.0 | Up-down flip probability |
+| Horizontal Flip | `--fliplr` | 0.5 | 0.0-1.0 | Left-right flip probability |
+| **Advanced Augmentation** |
+| Mosaic | `--mosaic` | 1.0 | 0.0-1.0 | 4-image mosaic probability |
+| Mixup | `--mixup` | 0.0 | 0.0-1.0 | Image blending probability |
+| Copy-Paste | `--copy-paste` | 0.1 | 0.0-1.0 | Instance copy-paste (segmentation) |
+
+#### 🎭 Segmentation-Specific Parameters
+
+| Parameter | CLI Argument | Default | Description |
+|-----------|--------------|---------|-------------|
+| Overlap Masks | `--overlap-mask` | True | Allow overlapping instance masks |
+| Mask Ratio | `--mask-ratio` | 4 | Mask downsample ratio (1,2,4,8) |
+| Single Class | `--single-cls` | False | Treat as single-class problem |
+
+### 🚨 Advanced Gradient Control
+
+#### ⚠️ Gradient Explosion Prevention
+
+For unstable training with NaN losses or exploding gradients:
+
+```bash
+# Conservative Stable Training
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --lr 0.001 \
+    --weight-decay 0.001 \
+    --warmup-epochs 15 \
+    --momentum 0.9 \
+    --box-loss-gain 3.0 \
+    --cls-loss-gain 0.25 \
+    --dfl-loss-gain 0.75 \
+    --batch-size 8 \
+    --patience 25
+```
+
+#### 📈 Progressive Training Strategy
+
+```bash
+# Phase 1: Warmup Training (50 epochs)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --lr 0.005 \
+    --warmup-epochs 20 \
+    --epochs 50 \
+    --patience 15 \
+    --name phase1_warmup
+
+# Phase 2: Full Training (resume from phase 1)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --lr 0.01 \
+    --epochs 200 \
+    --patience 30 \
+    --resume runs/segment/phase1_warmup/weights/last.pt \
+    --name phase2_full
+```
+
+#### 🔄 Model-Size Specific Hyperparameters
+
+**Nano Models (n) - Fast Training:**
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size n \
+    --lr 0.01 \
+    --batch-size 32 \
+    --weight-decay 0.0005 \
+    --warmup-epochs 3 \
+    --epochs 150
+```
+
+**Large Models (l,x) - Stable Training:**
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --lr 0.003 \
+    --batch-size 6 \
+    --weight-decay 0.0003 \
+    --warmup-epochs 10 \
+    --patience 50 \
+    --epochs 300
+```
+
+#### 🧪 DINO-Enhanced Gradient Control
+
+**DINO Single-Scale (Stable):**
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-variant vitb16 \
+    --dino-integration single \
+    --lr 0.008 \
+    --weight-decay 0.0003 \
+    --warmup-epochs 5 \
+    --batch-size 8
+```
+
+**DINO Dual-Scale (Advanced):**
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16 \
+    --dino-integration dual \
+    --lr 0.002 \
+    --weight-decay 0.0001 \
+    --warmup-epochs 15 \
+    --batch-size 4 \
+    --patience 50
+```
+
+**DINO Triple Integration (Expert):**
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-preprocessing dinov3_vitb16 \
+    --dino-variant vitl16 \
+    --dino-integration dual \
+    --lr 0.0015 \
+    --weight-decay 0.00005 \
+    --warmup-epochs 20 \
+    --batch-size 2 \
+    --patience 75 \
+    --epochs 400
+```
+
+### 💡 Hyperparameter Tuning Guidelines
+
+#### 🎯 Learning Rate Selection
+
+| Scenario | Recommended LR | Reasoning |
+|----------|----------------|-----------|
+| **Small datasets** (<1000 images) | 0.005-0.008 | Prevent overfitting |
+| **Large datasets** (>10k images) | 0.01-0.02 | Faster convergence |
+| **DINO integration** | 0.002-0.008 | Complex model needs stability |
+| **Fine-tuning** | 0.001-0.003 | Preserve pretrained features |
+| **High resolution** (>1024px) | 0.003-0.006 | More stable gradients |
+
+#### 🔧 Batch Size Optimization
+
+```bash
+# Auto-batch size detection
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --batch-size -1  # Auto-detect maximum batch size
+
+# Manual batch size based on GPU memory
+# RTX 3060 (12GB): batch-size 8-16
+# RTX 4090 (24GB): batch-size 16-32
+# A100 (40GB): batch-size 32-64
+```
+
+#### 📊 Loss Balance Strategies
+
+**Balanced Detection + Segmentation:**
+```bash
+--box-loss-gain 7.5 --cls-loss-gain 0.5 --dfl-loss-gain 1.5
+```
+
+**Prioritize Mask Quality:**
+```bash
+--box-loss-gain 5.0 --cls-loss-gain 1.0 --dfl-loss-gain 2.0
+```
+
+**Prioritize Detection Accuracy:**
+```bash
+--box-loss-gain 10.0 --cls-loss-gain 0.3 --dfl-loss-gain 1.0
+```
+
+### 🔬 Experimental Configurations
+
+#### 🏆 Maximum Accuracy Setup
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-preprocessing dinov3_vitb16 \
+    --dino-variant vitl16 \
+    --dino-integration dual \
+    --lr 0.002 \
+    --weight-decay 0.0001 \
+    --warmup-epochs 25 \
+    --patience 75 \
+    --box-loss-gain 6.0 \
+    --cls-loss-gain 0.8 \
+    --dfl-loss-gain 2.0 \
+    --mixup 0.2 \
+    --copy-paste 0.4 \
+    --epochs 500 \
+    --cache ram
+```
+
+#### ⚡ Speed-Optimized Setup
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --lr 0.015 \
+    --batch-size 24 \
+    --warmup-epochs 2 \
+    --patience 15 \
+    --val-period 5 \
+    --fast-val \
+    --epochs 100
+```
+
+#### 🧠 Memory-Efficient Setup
+```bash
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size m \
+    --batch-size 4 \
+    --lr 0.005 \
+    --weight-decay 0.001 \
+    --warmup-epochs 10 \
+    --cache False \
+    --workers 4
+```
+
 ## 📁 Repository Structure
 
 ### 🎯 **Key Files and Scripts**
