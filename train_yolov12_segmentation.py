@@ -206,6 +206,9 @@ Examples:
                           help='CUDA device (e.g., 0 or 0,1,2,3) or cpu')
     opt_group.add_argument('--workers', type=int, default=8,
                           help='Number of data loader workers')
+    opt_group.add_argument('--optimizer', type=str, default='SGD',
+                          choices=['SGD', 'Adam', 'AdamW', 'RMSProp', 'auto'],
+                          help='Optimizer to use (SGD, Adam, AdamW, RMSProp, auto)')
     opt_group.add_argument('--lr', type=float, default=0.01,
                           help='Initial learning rate')
     opt_group.add_argument('--weight-decay', type=float, default=0.0005,
@@ -600,6 +603,7 @@ def main():
             dfl=args.dfl_loss_gain,
             
             # Optimization parameters
+            optimizer=args.optimizer,
             lr0=args.lr,
             weight_decay=args.weight_decay,
             momentum=args.momentum,

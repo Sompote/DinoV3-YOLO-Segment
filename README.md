@@ -73,10 +73,13 @@ python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size s
 
-# With custom parameters
+# With custom optimizer and parameters
 python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size s \
+    --optimizer SGD \
+    --lr 0.01 \
+    --momentum 0.937 \
     --epochs 100 \
     --batch-size 16 \
     --imgsz 640
@@ -91,7 +94,9 @@ python train_yolov12_segmentation.py \
     --model-size s \
     --use-dino \
     --dino-variant vitb16 \
-    --dino-integration single
+    --dino-integration single \
+    --optimizer AdamW \
+    --lr 0.002
 
 # Dual-scale DINO enhancement (best performance)
 python train_yolov12_segmentation.py \
@@ -99,14 +104,18 @@ python train_yolov12_segmentation.py \
     --model-size l \
     --use-dino \
     --dino-variant vitl16 \
-    --dino-integration dual
+    --dino-integration dual \
+    --optimizer AdamW \
+    --lr 0.002
 
 # DINO preprocessing approach (most stable)
 python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size s \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16
+    --dino-preprocessing dinov3_vitb16 \
+    --optimizer SGD \
+    --lr 0.005
 
 # TRIPLE DINO integration (ultimate performance - P0+P3+P4)
 python train_yolov12_segmentation.py \
@@ -115,8 +124,30 @@ python train_yolov12_segmentation.py \
     --use-dino \
     --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitl16 \
-    --dino-integration dual
+    --dino-integration dual \
+    --optimizer AdamW \
+    --lr 0.001 \
+    --momentum 0.9 \
+    --weight-decay 0.01
 ```
+
+### 🎯 Optimizer Control
+
+Control optimizer settings to prevent automatic parameter override:
+
+```bash
+# Available optimizers with recommended settings
+--optimizer SGD --lr 0.01 --momentum 0.937          # Best for large datasets
+--optimizer Adam --lr 0.001 --weight-decay 0.0005   # Fast convergence
+--optimizer AdamW --lr 0.001 --weight-decay 0.01    # Best for DINO models
+--optimizer RMSProp --lr 0.001                       # Adaptive learning
+--optimizer auto                                     # Automatic selection (overrides manual settings)
+```
+
+**Key Benefits:**
+- **Manual Control**: Setting specific optimizer prevents automatic override
+- **Custom Parameters**: Your `--lr`, `--momentum`, `--weight-decay` are respected
+- **DINO Optimized**: AdamW works best with DINO integration models
 
 ### ⚡ Fast Training with Optimized Validation
 
@@ -170,13 +201,13 @@ Performance comparison on crack segmentation dataset using YOLOv12 Large (L) var
 | Model Configuration | mAP₅₀ (Box) | mAP₅₀ (Segment) | Model Type | DINO Integration |
 |---------------------|-------------|-----------------|------------|------------------|
 | **YOLOv12l-seg** | 0.672 | 0.564 | Standard | None |
-| **YOLOv12l + Triple DINO (VIT-B)** | **0.751** | **0.585** | Enhanced | P0+P3+P4 |
+| **YOLOv12l + Triple DINO (VIT-B)** | **0.780** | **0.626** | Enhanced | P0+P3+P4 |
 
 ### Key Performance Insights
 
 **🎯 Triple DINO Integration Benefits:**
-- **Box Detection**: +11.7% improvement (0.672 → 0.751 mAP₅₀)
-- **Segmentation**: +3.7% improvement (0.564 → 0.585 mAP₅₀)
+- **Box Detection**: +16.1% improvement (0.672 → 0.780 mAP₅₀)
+- **Segmentation**: +11.0% improvement (0.564 → 0.626 mAP₅₀)
 - **Overall**: Superior performance across both detection and segmentation tasks
 
 **📈 Performance Analysis:**
@@ -187,8 +218,8 @@ Standard YOLOv12l-seg:
 └── Configuration: Base segmentation model
 
 Triple DINO YOLOv12l-seg:
-├── Box mAP₅₀: 75.1% (+7.9 points)
-├── Segment mAP₅₀: 58.5% (+2.1 points)
+├── Box mAP₅₀: 78.0% (+10.8 points)
+├── Segment mAP₅₀: 62.6% (+6.2 points)
 └── Configuration: P0+P3+P4 DINO integration with VIT-B
 ```
 
@@ -211,9 +242,12 @@ python train_yolov12_segmentation.py \
     --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitb16 \
     --dino-integration dual \
+    --optimizer AdamW \
+    --lr 0.001 \
+    --momentum 0.9 \
+    --weight-decay 0.01 \
     --epochs 300 \
     --batch-size 4 \
-    --lr 0.001 \
     --patience 50 \
     --name crack_triple_dino
 ```
@@ -734,9 +768,10 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 |----------|-----------|-------------|
 | **Required** | `--data`, `--model-size` | Dataset YAML and model size (n/s/m/l/x) |
 | **DINO** | `--use-dino`, `--dino-variant`, `--dino-integration`, `--dino-preprocessing` | DINO enhancement options |
+| **Optimizer** | `--optimizer`, `--lr`, `--momentum`, `--weight-decay` | Optimizer control (SGD/Adam/AdamW/RMSProp/auto) |
 | **Fast Validation** | `--val-period`, `--val-split`, `--fast-val` | Speed optimization (25-100x faster) |
 | **Segmentation** | `--overlap-mask`, `--mask-ratio`, `--box-loss-gain` | Segmentation-specific parameters |
-| **Training** | `--epochs`, `--batch-size`, `--lr`, `--device`, `--patience` | Core training configuration |
+| **Training** | `--epochs`, `--batch-size`, `--device`, `--patience` | Core training configuration |
 | **Experiment** | `--name`, `--project`, `--resume` | Experiment management |
 
 ## 🎯 DINO Integration Strategies
