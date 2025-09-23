@@ -149,6 +149,31 @@ Control optimizer settings to prevent automatic parameter override:
 - **Custom Parameters**: Your `--lr`, `--momentum`, `--weight-decay` are respected
 - **DINO Optimized**: AdamW works best with DINO integration models
 
+### 💾 Weight Saving and Best Model Selection
+
+Ensure proper best weight saving to prevent `best.pt` = `last.pt` issues:
+
+```bash
+# Recommended settings for proper best weight detection
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --val \
+    --val-period 1 \
+    --patience 20 \
+    --save-best \
+    --plots \
+    --save-json \
+    --epochs 150
+```
+
+**Best Practices for Weight Saving:**
+- **Enable Validation**: Use `--val` to ensure fitness calculation
+- **Proper Patience**: Set `--patience 20-50` for early stopping
+- **Monitor Training**: Use `--plots --save-json` to track progress
+- **Sufficient Epochs**: Allow 100+ epochs for convergence detection
+- **Lower Learning Rate**: Prevents continuous improvement until last epoch
+
 ### ⚡ Fast Training with Optimized Validation
 
 ```bash

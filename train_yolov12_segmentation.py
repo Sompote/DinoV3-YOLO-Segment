@@ -278,6 +278,10 @@ Examples:
                           help='Generate training plots and mask visualizations (disabled by default for speed)')
     val_group.add_argument('--save-hybrid', action='store_true',
                           help='Save hybrid version of dataset labels')
+    val_group.add_argument('--save-best', action='store_true', default=True,
+                          help='Save best checkpoint based on fitness (default: True)')
+    val_group.add_argument('--save-last', action='store_true', default=True,
+                          help='Save last checkpoint (default: True)')
     val_group.add_argument('--cache', type=str, default=None, choices=['ram', 'disk'],
                           help='Cache dataset in RAM or disk for faster training')
     
@@ -635,6 +639,8 @@ def main():
             save_json=args.save_json,
             save_hybrid=args.save_hybrid,
             plots=args.plots,
+            save=args.save_best,  # Enable saving best weights
+            deterministic=False,  # Allow some randomness to prevent overfitting
             verbose=True,
             
             # Additional validation parameters (if supported by ultralytics)
