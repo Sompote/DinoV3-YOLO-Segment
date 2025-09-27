@@ -118,6 +118,14 @@ pip install -r requirements.txt
 pip install transformers  # For DINOv3 models
 pip install -e .
 
+# 4. Setup Hugging Face authentication (REQUIRED for DINOv3 models)
+export HUGGINGFACE_HUB_TOKEN="your_token_here"
+# Get your token from: https://huggingface.co/settings/tokens
+# Required permissions when creating token:
+#   - Read access to contents of all repos under your personal namespace
+#   - Read access to contents of all public gated repos you can access
+# Alternative: hf auth login
+
 # Verify installation
 python -c "from ultralytics.nn.modules.block import DINO3Backbone; print('✅ YOLOv12 Segmentation ready!')"
 ```
