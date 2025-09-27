@@ -1081,27 +1081,6 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
 }
 ```
 
-**Base architectures:**
-
-```BibTeX
-@article{tian2025yolov12,
-  title={YOLOv12: Attention-Centric Real-Time Instance Segmentation},
-  author={Tian, Yunjie and Ye, Qixiang and Doermann, David},
-  journal={arXiv preprint arXiv:2502.12524},
-  year={2025}
-}
-
-@inproceedings{oquab2023dinov2,
-  title={DINOv2: Learning Robust Visual Features without Supervision},
-  author={Oquab, Maxime and Darcet, Timothee and Moutakanni, Theo and Vo, Huy V and Szafraniec, Marc and Khalidov, Vasil and Fernandez, Pierre and Haziza, Daniel and Massa, Francisco and El-Nouby, Alaaeldin and others},
-  booktitle={International Conference on Machine Learning},
-  year={2023},
-  organization={PMLR}
-}
-```
-
----
-
 <div align="center">
 
 ### 🌟 **Star us on GitHub!**
