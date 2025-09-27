@@ -9,17 +9,17 @@ Usage Examples:
     # Basic segmentation training
     python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --epochs 100
 
-    # DINO-enhanced segmentation (single-scale)
-    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dino-integration single --epochs 100
+    # DINO-enhanced segmentation (single-scale with DINOv3) - DINOVERSION REQUIRED
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --integration single --dinoversion v3 --epochs 100
 
-    # DINO-enhanced segmentation (dual-scale for best performance)
-    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dino-integration dual --epochs 100
+    # DINO-enhanced segmentation (dual-scale for best performance with DINOv2) - DINOVERSION REQUIRED
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --integration dual --dinoversion v2 --epochs 100
 
-    # DINO preprocessing approach
-    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-preprocessing dinov3_vitb16 --epochs 100
+    # DINO preprocessing approach with DINOv3 - DINOVERSION REQUIRED
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --integration single --dinoversion v3 --epochs 100
 
-    # TRIPLE DINO integration (preprocessing + backbone - ultimate performance)
-    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-preprocessing dinov3_vitb16 --dino-variant vitl16 --dino-integration dual --epochs 150
+    # TRIPLE DINO integration (ultimate performance) - DINOVERSION REQUIRED
+    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --integration triple --dinoversion v3 --epochs 150
 """
 
 import argparse
@@ -39,7 +39,7 @@ if str(ROOT) not in sys.path:
 from ultralytics import YOLO
 from ultralytics.utils import LOGGER
 
-def create_segmentation_config_path(model_size, use_dino=False, dino_variant=None, dino_integration=None, dino_preprocessing=None):
+def create_segmentation_config_path(model_size, use_dino=False, dino_variant=None, dino_integration=None, dino_preprocessing=None, dino_version=None):
     """
     Create segmentation model configuration path based on parameters.
     
@@ -49,6 +49,7 @@ def create_segmentation_config_path(model_size, use_dino=False, dino_variant=Non
         dino_variant (str): DINO variant (vitb16, vitl16, etc.)
         dino_integration (str): Integration type (single, dual)
         dino_preprocessing (str): DINO preprocessing model
+        dino_version (str): DINO version ('v2' or 'v3')
     
     Returns:
         str: Path to segmentation model configuration file
@@ -163,14 +164,20 @@ Examples:
     dino_group.add_argument('--use-dino', action='store_true',
                            help='Enable DINO enhancement for better segmentation performance')
     dino_group.add_argument('--dino-variant', type=str, default=None,
-                           choices=['vits16', 'vitb16', 'vitl16', 'vith16_plus', 'vit7b16',
+                           choices=['vits16', 'vitb16', 'vitl16', 'vitl16_distilled', 'vith16_plus', 'vit7b16', 'vit7b16_lvd',
                                    'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large'],
-                           help='DINO model variant (required if --use-dino with integration)')
+                           help='DINO model variant: ViTs/B/L/L-dist/H+/7B-16/7B-LVD for different model sizes and datasets (required if --use-dino with integration)')
     dino_group.add_argument('--dino-integration', type=str, default='single',
                            choices=['single', 'dual'],
                            help='DINO integration: single(P4 level) or dual(P3+P4 levels)')
     dino_group.add_argument('--dino-preprocessing', type=str, default=None,
                            help='DINO preprocessing model (alternative to --dino-variant)')
+    dino_group.add_argument('--dinoversion', type=str, required=False,
+                           choices=['v2', 'v3'],
+                           help='DINO version: v2 (DINOv2) or v3 (DINOv3) - REQUIRED when using --use-dino')
+    dino_group.add_argument('--integration', type=str, default='single',
+                           choices=['single', 'dual', 'triple'],
+                           help='DINO integration strategy: single(P4), dual(P3+P4), triple(P0+P3+P4) - replaces --dino-integration and --dino-preprocessing')
     dino_group.add_argument('--freeze-dino', action='store_true', default=True,
                            help='Freeze DINO weights during training (default: True)')
     dino_group.add_argument('--unfreeze-dino', action='store_true',
@@ -296,16 +303,37 @@ def validate_segmentation_arguments(args):
     # Validate DINO arguments
     if args.use_dino:
         if not args.dino_variant and not args.dino_preprocessing:
-            raise ValueError("--dino-variant or --dino-preprocessing is required when --use-dino is specified")
+            raise ValueError("--dino-variant is required when --use-dino is specified")
         
-        # Triple integration: preprocessing + backbone integration
-        if args.dino_variant and args.dino_preprocessing:
-            LOGGER.info("🚀 TRIPLE DINO INTEGRATION: Preprocessing (P0) + Backbone (P3+P4)")
-            LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} ({args.dino_integration})")
-            # This is now ALLOWED for maximum performance
+        if not args.dinoversion:
+            raise ValueError("--dinoversion is required when --use-dino is specified. Choose 'v2' or 'v3'.")
         
-        if args.dino_variant and not args.dino_integration:
-            LOGGER.warning(f"No --dino-integration specified, using default: single")
+        LOGGER.info(f"🔄 Using DINO version: {args.dinoversion.upper()}")
+        
+        # Handle new --integration parameter
+        if hasattr(args, 'integration'):
+            if args.integration == 'single':
+                args.dino_integration = 'single'
+                args.dino_preprocessing = None
+                LOGGER.info("📐 SINGLE INTEGRATION: DINO enhancement at P4 level")
+            elif args.integration == 'dual':
+                args.dino_integration = 'dual' 
+                args.dino_preprocessing = None
+                LOGGER.info("📐 DUAL INTEGRATION: DINO enhancement at P3+P4 levels")
+            elif args.integration == 'triple':
+                args.dino_integration = 'dual'
+                if not args.dino_preprocessing:
+                    args.dino_preprocessing = f"dinov3_{args.dino_variant}"
+                LOGGER.info("🚀 TRIPLE INTEGRATION: DINO enhancement at P0+P3+P4 levels")
+                LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} (P3+P4)")
+        else:
+            # Fallback to old logic for backward compatibility
+            if args.dino_variant and args.dino_preprocessing:
+                LOGGER.info("🚀 TRIPLE DINO INTEGRATION: Preprocessing (P0) + Backbone (P3+P4)")
+                LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} ({args.dino_integration})")
+            
+            if args.dino_variant and not args.dino_integration:
+                LOGGER.warning(f"No --dino-integration specified, using default: single")
     
     # Handle DINO freezing logic
     if args.unfreeze_dino:
@@ -435,7 +463,7 @@ def get_additional_validation_params(args):
     
     return params
 
-def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_size, freeze_dino, dino_variant=None, dino_integration='single'):
+def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_size, freeze_dino, dino_variant=None, dino_integration='single', dino_version='v3'):
     """
     Modify segmentation config for DINO approaches.
     For triple integration: adds preprocessing to backbone integration configs.
@@ -459,18 +487,31 @@ def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_s
         # Insert DINO3Preprocessor at the beginning of the backbone
         if 'backbone' in config and config['backbone']:
             # Insert preprocessor as the first layer
-            preprocessor_layer = [-1, 1, 'DINO3Preprocessor', [dino_preprocessing, freeze_dino, 3]]
+            preprocessor_layer = [-1, 1, 'DINO3Preprocessor', [dino_preprocessing, freeze_dino, 3, dino_version]]
             config['backbone'].insert(0, preprocessor_layer)
             
             # Update the first Conv layer to expect 3 channels from preprocessor
             if len(config['backbone']) > 1:
                 first_conv = config['backbone'][1]
                 if len(first_conv) >= 4 and first_conv[2] == 'Conv':
-                    # The input channels are implicitly 3 now (from preprocessor)
-                    pass
+                    # Update the first Conv layer to expect 3 input channels from preprocessor
+                    # Format: [-1, repeats, 'Conv', [out_channels, kernel_size, stride, padding, groups]]
+                    if len(first_conv[3]) >= 1:
+                        # The input channels are now 3 (from preprocessor), but we don't need to specify
+                        # input channels in YOLO configs as they're inferred. Just ensure consistency.
+                        print(f"   🔧 First Conv layer after preprocessor: {first_conv}")
+                        # The layer will automatically adapt to 3 input channels
+            
+            # Update existing DINO3Backbone layers to include dino_version
+            for layer in config['backbone']:
+                if len(layer) >= 4 and layer[2] == 'DINO3Backbone':
+                    # Add dino_version as the 4th parameter: [model_name, freeze_backbone, output_channels, dino_version]
+                    if len(layer[3]) == 3:  # Current format: [model_name, freeze_backbone, output_channels]
+                        layer[3].append(dino_version)
             
             print(f"   ✅ P0 Enhancement: {dino_preprocessing} (inserted at backbone start)")
             print(f"   ✅ P3/P4 Enhancement: {dino_variant} ({dino_integration}-scale) (from base config)")
+            print(f"   ✅ DINO Version: {dino_version} (applied to all DINO modules)")
             
             # Update head layer references since we inserted a layer at the beginning
             if 'head' in config:
@@ -519,6 +560,61 @@ def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_s
     
     return temp_path
 
+def apply_dino_version_to_config(config_path, dino_version):
+    """
+    Apply DINO version parameter to all DINO modules in a configuration file.
+    
+    This function ensures that all DINO3Backbone and DINO3Preprocessor modules
+    in the YAML configuration receive the correct dino_version parameter.
+    
+    Args:
+        config_path (str): Path to the YAML configuration file
+        dino_version (str): DINO version ('v2' or 'v3')
+    
+    Returns:
+        str: Path to the updated configuration file (may be temporary)
+    """
+    # Check if this is already a temporary file with DINO version applied
+    if (config_path.startswith('/tmp/') or config_path.startswith('/var/folders/') or 
+        'dino_seg_' in os.path.basename(config_path) or '_dino_version.yaml' in config_path):
+        # This is likely already processed
+        return config_path
+    
+    # Load the YAML config
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    needs_update = False
+    
+    # Update DINO3Backbone layers in backbone
+    if 'backbone' in config:
+        for layer in config['backbone']:
+            if len(layer) >= 4 and layer[2] == 'DINO3Backbone':
+                # Add dino_version as the 4th parameter if not present
+                if len(layer[3]) == 3:  # Current format: [model_name, freeze_backbone, output_channels]
+                    layer[3].append(dino_version)
+                    needs_update = True
+    
+    # Update DINO3Preprocessor layers in backbone (if any)
+    if 'backbone' in config:
+        for layer in config['backbone']:
+            if len(layer) >= 4 and layer[2] == 'DINO3Preprocessor':
+                # Add dino_version as the 4th parameter if not present
+                if len(layer[3]) == 3:  # Current format: [model_name, freeze_backbone, output_channels]
+                    layer[3].append(dino_version)
+                    needs_update = True
+    
+    # If no updates needed, return original path
+    if not needs_update:
+        return config_path
+    
+    # Create temporary config file with updates
+    temp_fd, temp_path = tempfile.mkstemp(suffix='_dino_version.yaml', prefix='yolov12_dino_')
+    with os.fdopen(temp_fd, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    
+    return temp_path
+
 def main():
     """Main segmentation training function."""
     print("🎭 YOLOv12 Instance Segmentation Training with DINO Enhancement")
@@ -532,8 +628,12 @@ def main():
     # Create segmentation model configuration path
     model_config = create_segmentation_config_path(
         args.model_size, args.use_dino, args.dino_variant, 
-        args.dino_integration, args.dino_preprocessing
+        args.dino_integration, args.dino_preprocessing, args.dinoversion
     )
+    
+    # Apply DINO version to configuration if needed
+    if args.use_dino:
+        model_config = apply_dino_version_to_config(model_config, args.dinoversion)
     
     # Create experiment name
     experiment_name = create_segmentation_experiment_name(args)
@@ -574,7 +674,7 @@ def main():
         if args.dino_preprocessing:
             temp_config_path = modify_segmentation_config_for_dino(
                 model_config, args.dino_preprocessing, args.model_size, args.freeze_dino,
-                args.dino_variant, args.dino_integration
+                args.dino_variant, args.dino_integration, args.dinoversion
             )
             if temp_config_path != model_config:
                 model_config = temp_config_path

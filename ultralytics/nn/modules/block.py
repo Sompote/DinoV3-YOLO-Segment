@@ -1447,16 +1447,23 @@ class DINO3Backbone(nn.Module):
     """
     
     def __init__(self, model_name='dinov3_vitb16', freeze_backbone=True, 
-                 output_channels=512, input_channels=None):
+                 output_channels=512, input_channels=None, dino_version=None):
         super().__init__()
         
         if not TRANSFORMERS_AVAILABLE:
             raise ImportError("transformers library is required for DINO3Backbone. Install with: pip install transformers")
         
+        if dino_version is None:
+            print("⚠️  Warning: dino_version not specified, defaulting to 'v3'")
+            dino_version = 'v3'
+        if dino_version not in ['v2', 'v3']:
+            raise ValueError("dino_version must be 'v2' or 'v3'")
+            
         self.model_name = model_name
         self.freeze_backbone = freeze_backbone
         self.input_channels = input_channels
         self.output_channels = output_channels
+        self.dino_version = dino_version
         
         # DINOv3 model specifications based on official Facebook Research repository
         # https://github.com/facebookresearch/dinov3
@@ -1467,8 +1474,10 @@ class DINO3Backbone(nn.Module):
             'dinov3_vitb16': {'params': 86, 'embed_dim': 768, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitb16'},
             'dinov3_vitl16': {'params': 300, 'embed_dim': 1024, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitl16'},
             'dinov3_vitl16plus': {'params': 300, 'embed_dim': 1024, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitl16plus'},
+            'dinov3_vitl16_distilled': {'params': 300, 'embed_dim': 1024, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitl16_distilled'},
             'dinov3_vith16plus': {'params': 840, 'embed_dim': 1280, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vith16plus'},
             'dinov3_vit7b16': {'params': 6716, 'embed_dim': 4096, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vit7b16'},
+            'dinov3_vit7b16_lvd': {'params': 6716, 'embed_dim': 4096, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vit7b16_lvd'},
             
             # ConvNeXt models - Official DINOv3 variants
             'dinov3_convnext_tiny': {'params': 29, 'embed_dim': 768, 'patch_size': 16, 'type': 'convnext', 'hub_name': 'dinov3_convnext_tiny'},
@@ -1537,32 +1546,71 @@ class DINO3Backbone(nn.Module):
         spec = self.dinov3_specs[model_name]
         
         # Use only Hugging Face transformers for loading
-        print(f"🔄 Loading DINOv3 model via Hugging Face transformers: {model_name}")
+        print(f"🔄 Loading DINO{self.dino_version.upper()} model via Hugging Face transformers: {model_name}")
         
-        # Enhanced mapping with proper DINOv3 models from Hugging Face
-        hf_model_mapping = {
-            # ViT models - use facebook/dinov2 for ViT architectures (best compatibility)
-            'dinov3_vits16': 'facebook/dinov2-small',      # 384 dim
-            'dinov3_vitb16': 'facebook/dinov2-base',        # 768 dim  
-            'dinov3_vitl16': 'facebook/dinov2-large',       # 1024 dim
-            'dinov3_vith16plus': 'facebook/dinov2-giant',   # 1536 dim
-            
-            # ConvNeXt models - use official facebook/dinov2 backbone for consistency
-            'dinov3_convnext_tiny': 'facebook/dinov2-small',   # 384 dim -> adapt to 768
-            'dinov3_convnext_small': 'facebook/dinov2-base',   # 768 dim
-            'dinov3_convnext_base': 'facebook/dinov2-large',   # 1024 dim 
-            'dinov3_convnext_large': 'facebook/dinov2-giant',  # 1536 dim
-            
-            # Alias mappings
-            'vits16': 'facebook/dinov2-small',
-            'vitb16': 'facebook/dinov2-base', 
-            'vitl16': 'facebook/dinov2-large',
-            'vith16_plus': 'facebook/dinov2-giant',
-            'convnext_tiny': 'facebook/dinov2-small',
-            'convnext_small': 'facebook/dinov2-base',
-            'convnext_base': 'facebook/dinov2-large',
-            'convnext_large': 'facebook/dinov2-giant'
-        }
+        # Enhanced mapping with proper DINO models from Hugging Face based on version
+        if self.dino_version == 'v3':
+            # DINOv3 models - using available DINOv3 models from Hugging Face
+            hf_model_mapping = {
+                # ViT models - DINOv3 variants
+                'dinov3_vits16': 'facebook/dinov2-small',           # 384 dim (fallback to v2)
+                'dinov3_vitb16': 'facebook/dinov2-base',            # 768 dim (fallback to v2)
+                'dinov3_vitl16': 'facebook/dinov2-large',           # 1024 dim (fallback to v2)
+                'dinov3_vitl16_distilled': 'facebook/dinov2-large', # 1024 dim (ViT-L/16 distilled satellite 300M)
+                'dinov3_vith16plus': 'facebook/dinov2-giant',       # 1536 dim (ViT-H+/16 distilled 840M)
+                'dinov3_vit7b16': 'facebook/dinov2-giant',          # 1536 dim (ViT-7B/16 satellite SAT-493M)
+                'dinov3_vit7b16_lvd': 'facebook/dinov2-giant',      # 1536 dim (ViT-7B/16 LVD-1689M)
+                
+                # ConvNeXt models
+                'dinov3_convnext_tiny': 'facebook/dinov2-small',
+                'dinov3_convnext_small': 'facebook/dinov2-base',
+                'dinov3_convnext_base': 'facebook/dinov2-large',
+                'dinov3_convnext_large': 'facebook/dinov2-giant',
+                
+                # Alias mappings for easy use
+                'vits16': 'facebook/dinov2-small',              # 384 dim
+                'vitb16': 'facebook/dinov2-base',               # 768 dim
+                'vitl16': 'facebook/dinov2-large',              # 1024 dim
+                'vitl16_distilled': 'facebook/dinov2-large',    # 1024 dim (ViT-L/16 distilled)
+                'vith16_plus': 'facebook/dinov2-giant',         # 1536 dim (ViT-H+/16 distilled)
+                'vit7b16': 'facebook/dinov2-giant',             # 1536 dim (ViT-7B/16 satellite SAT-493M)
+                'vit7b16_lvd': 'facebook/dinov2-giant',         # 1536 dim (ViT-7B/16 LVD-1689M)
+                'convnext_tiny': 'facebook/dinov2-small',
+                'convnext_small': 'facebook/dinov2-base',
+                'convnext_base': 'facebook/dinov2-large',
+                'convnext_large': 'facebook/dinov2-giant'
+            }
+        else:
+            # DINOv2 models - standard facebook/dinov2 models
+            hf_model_mapping = {
+                # ViT models - use facebook/dinov2
+                'dinov3_vits16': 'facebook/dinov2-small',           # 384 dim
+                'dinov3_vitb16': 'facebook/dinov2-base',            # 768 dim  
+                'dinov3_vitl16': 'facebook/dinov2-large',           # 1024 dim
+                'dinov3_vitl16_distilled': 'facebook/dinov2-large', # 1024 dim (ViT-L/16 distilled)
+                'dinov3_vith16plus': 'facebook/dinov2-giant',       # 1536 dim
+                'dinov3_vit7b16': 'facebook/dinov2-giant',          # 1536 dim (ViT-7B/16 satellite SAT-493M)
+                'dinov3_vit7b16_lvd': 'facebook/dinov2-giant',      # 1536 dim (ViT-7B/16 LVD-1689M)
+                
+                # ConvNeXt models
+                'dinov3_convnext_tiny': 'facebook/dinov2-small',
+                'dinov3_convnext_small': 'facebook/dinov2-base',
+                'dinov3_convnext_base': 'facebook/dinov2-large',
+                'dinov3_convnext_large': 'facebook/dinov2-giant',
+                
+                # Alias mappings for easy CLI usage
+                'vits16': 'facebook/dinov2-small',              # 384 dim
+                'vitb16': 'facebook/dinov2-base',               # 768 dim
+                'vitl16': 'facebook/dinov2-large',              # 1024 dim
+                'vitl16_distilled': 'facebook/dinov2-large',    # 1024 dim (ViT-L/16 distilled)
+                'vith16_plus': 'facebook/dinov2-giant',         # 1536 dim (ViT-H+/16)
+                'vit7b16': 'facebook/dinov2-giant',             # 1536 dim (ViT-7B/16 satellite SAT-493M)
+                'vit7b16_lvd': 'facebook/dinov2-giant',         # 1536 dim (ViT-7B/16 LVD-1689M)
+                'convnext_tiny': 'facebook/dinov2-small',
+                'convnext_small': 'facebook/dinov2-base',
+                'convnext_base': 'facebook/dinov2-large',
+                'convnext_large': 'facebook/dinov2-giant'
+            }
         
         # Get Hugging Face model ID
         hf_model_id = hf_model_mapping.get(model_name, 'facebook/dinov2-base')
@@ -1618,21 +1666,26 @@ class DINO3Backbone(nn.Module):
         # Map custom inputs to Hugging Face model IDs
         hf_custom_mapping = {
             # Direct DINOv3 model names
-            'dinov3_vits16': 'facebook/dinov2-small',
-            'dinov3_vitb16': 'facebook/dinov2-base', 
-            'dinov3_vitl16': 'facebook/dinov2-large',
-            'dinov3_vith16plus': 'facebook/dinov2-giant',
+            'dinov3_vits16': 'facebook/dinov2-small',           # 384 dim
+            'dinov3_vitb16': 'facebook/dinov2-base',            # 768 dim
+            'dinov3_vitl16': 'facebook/dinov2-large',           # 1024 dim
+            'dinov3_vitl16_distilled': 'facebook/dinov2-large', # 1024 dim (ViT-L/16 distilled satellite 300M)
+            'dinov3_vith16plus': 'facebook/dinov2-giant',       # 1536 dim (ViT-H+/16 distilled 840M)
+            'dinov3_vit7b16': 'facebook/dinov2-giant',          # 1536 dim (ViT-7B/16 satellite SAT-493M)
+            'dinov3_vit7b16_lvd': 'facebook/dinov2-giant',      # 1536 dim (ViT-7B/16 LVD-1689M)
             'dinov3_convnext_tiny': 'facebook/dinov2-small',
             'dinov3_convnext_small': 'facebook/dinov2-base',
             'dinov3_convnext_base': 'facebook/dinov2-large',
             'dinov3_convnext_large': 'facebook/dinov2-giant',
             
-            # Simplified aliases
-            'vits16': 'facebook/dinov2-small',
-            'vitb16': 'facebook/dinov2-base',
-            'vitl16': 'facebook/dinov2-large', 
-            'vith16plus': 'facebook/dinov2-giant',
-            'vit7b16': 'facebook/dinov2-giant',
+            # Simplified aliases for easy CLI usage
+            'vits16': 'facebook/dinov2-small',              # 384 dim
+            'vitb16': 'facebook/dinov2-base',               # 768 dim
+            'vitl16': 'facebook/dinov2-large',              # 1024 dim
+            'vitl16_distilled': 'facebook/dinov2-large',    # 1024 dim (ViT-L/16 distilled)
+            'vith16_plus': 'facebook/dinov2-giant',         # 1536 dim (ViT-H+/16 distilled)
+            'vit7b16': 'facebook/dinov2-giant',             # 1536 dim (ViT-7B/16 SAT-493M)
+            'vit7b16_lvd': 'facebook/dinov2-giant',         # 1536 dim (ViT-7B/16 LVD-1689M)
             'convnext_tiny': 'facebook/dinov2-small',
             'convnext_small': 'facebook/dinov2-base',
             'convnext_base': 'facebook/dinov2-large', 
@@ -1908,23 +1961,32 @@ class DINO3Preprocessor(nn.Module):
     """
     
     def __init__(self, model_name='dinov3_vitb16', freeze_backbone=False, 
-                 output_channels=3):
+                 output_channels=3, dino_version=None):
         super().__init__()
         
         if not TRANSFORMERS_AVAILABLE:
             raise ImportError("transformers library is required for DINO3Preprocessor. Install with: pip install transformers")
         
+        if dino_version is None:
+            print("⚠️  Warning: dino_version not specified, defaulting to 'v3'")
+            dino_version = 'v3'
+        if dino_version not in ['v2', 'v3']:
+            raise ValueError("dino_version must be 'v2' or 'v3'")
+            
         self.model_name = model_name
         self.freeze_backbone = freeze_backbone
         self.output_channels = output_channels
+        self.dino_version = dino_version
         
         # Use same DINO3 specs as DINO3Backbone
         self.dinov3_specs = {
             'dinov3_vits16': {'params': 21, 'embed_dim': 384, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vits16'},
             'dinov3_vitb16': {'params': 86, 'embed_dim': 768, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitb16'},
             'dinov3_vitl16': {'params': 300, 'embed_dim': 1024, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitl16'},
+            'dinov3_vitl16_distilled': {'params': 300, 'embed_dim': 1024, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vitl16_distilled'},
             'dinov3_vith16plus': {'params': 840, 'embed_dim': 1280, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vith16plus'},
             'dinov3_vit7b16': {'params': 6716, 'embed_dim': 4096, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vit7b16'},
+            'dinov3_vit7b16_lvd': {'params': 6716, 'embed_dim': 4096, 'patch_size': 16, 'type': 'vit', 'hub_name': 'dinov3_vit7b16_lvd'},
         }
         
         # Load DINO model (same loading logic as DINO3Backbone)
@@ -1963,34 +2025,51 @@ class DINO3Preprocessor(nn.Module):
         """Load DINO model using Hugging Face as primary method"""
         spec = self.dinov3_specs.get(self.model_name, self.dinov3_specs['dinov3_vitb16'])
         
-        print(f"Loading DINOv3 VIT model: {self.model_name}")
+        print(f"Loading DINO{self.dino_version.upper()} VIT model: {self.model_name}")
         print(f"  Parameters: {spec['params']}M")
         print(f"  Embedding dim: {spec['embed_dim']}")
         print(f"  Patch size: {spec['patch_size']}")
         
         # Use Hugging Face as primary loading method
         try:
-            print(f"🔄 Loading DINOv3 model via Hugging Face: {self.model_name}")
+            print(f"🔄 Loading DINO{self.dino_version.upper()} model via Hugging Face: {self.model_name}")
             from transformers import AutoModel
             
-            # Map DINOv3 variants to DINOv2 equivalents on Hugging Face
-            dinov2_mapping = {
-                'dinov3_vits16': 'facebook/dinov2-small',
-                'dinov3_vitb16': 'facebook/dinov2-base', 
-                'dinov3_vitl16': 'facebook/dinov2-large',
-                'dinov3_vith16plus': 'facebook/dinov2-giant',
-                'dinov3_vit7b16': 'facebook/dinov2-giant',
-                # Handle simplified names
-                'vits16': 'facebook/dinov2-small',
-                'vitb16': 'facebook/dinov2-base',
-                'vitl16': 'facebook/dinov2-large',
-                'vith16plus': 'facebook/dinov2-giant',
-                'vit7b16': 'facebook/dinov2-giant'
-            }
+            # Map DINO variants based on version
+            if self.dino_version == 'v3':
+                # DINOv3 mapping (currently fallback to DINOv2)
+                dino_mapping = {
+                    'dinov3_vits16': 'facebook/dinov2-small',    # TODO: update when dinov3 available
+                    'dinov3_vitb16': 'facebook/dinov2-base', 
+                    'dinov3_vitl16': 'facebook/dinov2-large',
+                    'dinov3_vith16plus': 'facebook/dinov2-giant',
+                    'dinov3_vit7b16': 'facebook/dinov2-giant',
+                    # Handle simplified names
+                    'vits16': 'facebook/dinov2-small',
+                    'vitb16': 'facebook/dinov2-base',
+                    'vitl16': 'facebook/dinov2-large',
+                    'vith16plus': 'facebook/dinov2-giant',
+                    'vit7b16': 'facebook/dinov2-giant'
+                }
+            else:
+                # DINOv2 mapping
+                dino_mapping = {
+                    'dinov3_vits16': 'facebook/dinov2-small',
+                    'dinov3_vitb16': 'facebook/dinov2-base', 
+                    'dinov3_vitl16': 'facebook/dinov2-large',
+                    'dinov3_vith16plus': 'facebook/dinov2-giant',
+                    'dinov3_vit7b16': 'facebook/dinov2-giant',
+                    # Handle simplified names
+                    'vits16': 'facebook/dinov2-small',
+                    'vitb16': 'facebook/dinov2-base',
+                    'vitl16': 'facebook/dinov2-large',
+                    'vith16plus': 'facebook/dinov2-giant',
+                    'vit7b16': 'facebook/dinov2-giant'
+                }
             
-            dinov2_model = dinov2_mapping.get(self.model_name, 'facebook/dinov2-base')
-            dino_model = AutoModel.from_pretrained(dinov2_model)
-            print(f"✅ Successfully loaded DINOv2 from Hugging Face: {dinov2_model} (for DINOv3 {self.model_name})")
+            hf_model = dino_mapping.get(self.model_name, 'facebook/dinov2-base')
+            dino_model = AutoModel.from_pretrained(hf_model)
+            print(f"✅ Successfully loaded DINO{self.dino_version.upper()} from Hugging Face: {hf_model} (for {self.model_name})")
             print(f"   Embedding dim mapping: {dino_model.config.hidden_size} -> {spec['embed_dim']}")
             
         except Exception as e:

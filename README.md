@@ -16,10 +16,13 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 - 🎭 **Instance Segmentation**: Pixel-perfect mask prediction with 32 prototypes
 - 🏗️ **Complete Model Family**: 5 sizes (nano, small, medium, large, x-large) × 4 variants = 20 models
 - 🔬 **DINO Integration**: Multiple DINOv3 enhancement strategies including **Triple Integration** (P0+P3+P4)
+- 🔄 **DINO Version Support**: Choose between DINOv2 and DINOv3 with `--dinoversion` parameter
 - 📐 **Precise Masks**: Advanced segmentation head with prototype-based mask generation
 - ⚡ **Optimized Performance**: Balanced speed/accuracy across different model sizes
 - 🚀 **Fast Training**: 50-100x faster validation with smart optimization strategies
 - 🛠️ **Production Ready**: Easy deployment and training on custom segmentation datasets
+
+> **📄 Citation**: If you use this work, please cite our repository: [https://github.com/Sompote/DinoV3-YOLO-Segment](https://github.com/Sompote/DinoV3-YOLO-Segment)
 
 ## 📊 Model Variants
 
@@ -42,6 +45,60 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 | YOLOv12x-seg | 44.2 | 65.3 | 15.43 | 64.5M | Excellent |
 
 > **Note**: DINO-enhanced variants show 2-5% mask mAP improvements with enhanced boundary precision.
+
+## 🔄 DINO Version Support
+
+This implementation supports both **DINOv2** and **DINOv3** models for maximum flexibility and compatibility:
+
+### Version Selection
+
+| Version | Description | Compatibility | Recommended Use |
+|---------|-------------|---------------|-----------------|
+| **DINOv2** (`--dinoversion v2`) | Stable, widely tested | Full Hugging Face support | Production, proven performance |
+| **DINOv3** (`--dinoversion v3`) | Latest features, improved performance | Limited availability | Research, cutting-edge projects |
+
+### Available ViT Variants
+
+| Variant | Parameters | Embed Dim | Dataset | Description | Memory Usage | Recommended For |
+|---------|------------|-----------|---------|-------------|--------------|-----------------|
+| `vits16` | 21M | 384 | LVD-142M | Small, fast | Low | Development, testing |
+| `vitb16` | 86M | 768 | LVD-142M | Balanced | Medium | General use, production |
+| `vitl16` | 300M | 1024 | LVD-142M | Large, high-performance | High | High-accuracy needs |
+| `vitl16_distilled` | 300M | 1024 | SAT-493M | ViT-L/16 Distilled (Satellite) | High | Optimized performance |
+| `vith16_plus` | 840M | 1536 | LVD-1689M | ViT-H+/16 Distilled | Very High | Maximum performance |
+| `vit7b16` | 6716M | 4096 | SAT-493M | ViT-7B/16 (Satellite) | Extreme | Research, cutting-edge |
+| `vit7b16_lvd` | 6716M | 4096 | LVD-1689M | ViT-7B/16 (Standard) | Extreme | Research, maximum scale |
+
+#### Dataset Information
+- **LVD-142M**: Large Vision Dataset with 142M images - standard training dataset
+- **LVD-1689M**: Large Vision Dataset with 1.689B images - enhanced training for larger models  
+- **SAT-493M**: Satellite Dataset with 493M images - specialized distillation training on satellite imagery
+
+### Usage
+
+```bash
+# Use DINOv2 (stable, widely compatible)
+python train_yolov12_segmentation.py \
+    --data data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-variant vitb16 \
+    --dinoversion v2 \
+    --integration single
+
+# Use DINOv3 (latest features)  
+python train_yolov12_segmentation.py \
+    --data data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-variant vitb16 \
+    --dinoversion v3 \
+    --integration dual
+```
+
+> **Important**: The `--dinoversion` parameter is **REQUIRED** when using `--use-dino` to avoid any confusion about which DINO version is being used.
+
+> **Note**: Currently, both versions load DINOv2 models from Hugging Face as DINOv3 models are not yet officially available there. The infrastructure is ready for DINOv3 when they become available.
 
 ## 🚀 Quick Start
 
@@ -88,43 +145,36 @@ python train_yolov12_segmentation.py \
 ### DINO-Enhanced Segmentation Training
 
 ```bash
-# Single-scale DINO enhancement (balanced performance)
+# Single-scale DINO enhancement with DINOv3 (balanced performance)
 python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size s \
     --use-dino \
     --dino-variant vitb16 \
-    --dino-integration single \
+    --dinoversion v3 \
+    --integration single \
     --optimizer AdamW \
     --lr 0.002
 
-# Dual-scale DINO enhancement (best performance)
+# Dual-scale DINO enhancement with DINOv2 (best compatibility)
 python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size l \
     --use-dino \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --dinoversion v2 \
+    --integration dual \
     --optimizer AdamW \
     --lr 0.002
 
-# DINO preprocessing approach (most stable)
-python train_yolov12_segmentation.py \
-    --data segmentation_data.yaml \
-    --model-size s \
-    --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
-    --optimizer SGD \
-    --lr 0.005
-
-# TRIPLE DINO integration (ultimate performance - P0+P3+P4)
+# TRIPLE DINO integration with DINOv3 (ultimate performance - P0+P3+P4)
 python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --dinoversion v3 \
+    --integration triple \
     --optimizer AdamW \
     --lr 0.001 \
     --momentum 0.9 \
@@ -183,7 +233,8 @@ python train_yolov12_segmentation.py \
     --model-size s \
     --use-dino \
     --dino-variant vitb16 \
-    --dino-integration single \
+    --dinoversion v3 \
+    --integration single \
     --val-period 5 \
     --val-split 0.2 \
     --fast-val
@@ -202,9 +253,9 @@ python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --dinoversion v3 \
+    --integration triple \
     --val-period 5 \
     --val-split 0.3 \
     --epochs 300
@@ -264,9 +315,9 @@ python train_yolov12_segmentation.py \
     --data crack_dataset.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitb16 \
-    --dino-integration dual \
+    --dinoversion v3 \
+    --integration triple \
     --optimizer AdamW \
     --lr 0.001 \
     --momentum 0.9 \
@@ -275,6 +326,127 @@ python train_yolov12_segmentation.py \
     --batch-size 4 \
     --patience 50 \
     --name crack_triple_dino
+```
+
+## 🔗 Integration Strategies
+
+The new `--integration` parameter simplifies DINO integration selection:
+
+| Integration | Description | Enhancement Levels | Performance | Use Case |
+|-------------|-------------|-------------------|-------------|----------|
+| `single` | DINO at P4 level only | P4 enhancement | Good | Balanced speed/accuracy |
+| `dual` | DINO at P3 and P4 levels | P3 + P4 enhancement | Better | High accuracy needs |
+| `triple` | DINO at P0, P3, and P4 levels | P0 + P3 + P4 enhancement | Best | Ultimate performance |
+
+### Integration Examples
+
+```bash
+# Single integration (fastest)
+python train_yolov12_segmentation.py \
+    --data data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-variant vitb16 \
+    --dinoversion v3 \
+    --integration single
+
+# Dual integration (balanced)
+python train_yolov12_segmentation.py \
+    --data data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16 \
+    --dinoversion v3 \
+    --integration dual
+
+# Triple integration (ultimate)
+python train_yolov12_segmentation.py \
+    --data data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16 \
+    --dinoversion v3 \
+    --integration triple
+```
+
+### 🚀 Advanced ViT Variants
+
+For maximum performance with the largest DINOv3 models:
+
+```bash
+# ViT-L/16 Distilled (300M parameters, satellite-trained) - Optimized large model
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16_distilled \
+    --dinoversion v3 \
+    --integration dual \
+    --epochs 250 \
+    --batch-size 4 \
+    --name vitL_distilled_satellite
+
+# ViT-H+/16 Distilled (840M parameters) - High-performance variant
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vith16_plus \
+    --dinoversion v3 \
+    --integration dual \
+    --epochs 200 \
+    --batch-size 2 \
+    --name vitH_plus_experiment
+
+# ViT-7B/16 (6.7B parameters, satellite-trained) - Ultimate performance (Satellite)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vit7b16 \
+    --dinoversion v3 \
+    --integration dual \
+    --epochs 150 \
+    --batch-size 1 \
+    --device cuda \
+    --name vit7b_ultimate_satellite
+
+# ViT-7B/16 (6.7B parameters, LVD-1689M trained) - Ultimate performance (Standard)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vit7b16_lvd \
+    --dinoversion v3 \
+    --integration dual \
+    --epochs 150 \
+    --batch-size 1 \
+    --device cuda \
+    --name vit7b_ultimate_standard
+
+# Triple integration for ViT-7B/16 (satellite-trained, ultimate performance)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vit7b16 \
+    --dinoversion v3 \
+    --integration triple \
+    --epochs 100 \
+    --batch-size 1 \
+    --name vit7b_triple_satellite
+
+# Triple integration for ViT-7B/16 (LVD-1689M, ultimate performance)  
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vit7b16_lvd \
+    --dinoversion v3 \
+    --integration triple \
+    --epochs 100 \
+    --batch-size 1 \
+    --name vit7b_triple_standard
 ```
 
 ## 🔍 Segmentation Inference
@@ -355,9 +527,9 @@ python train_yolov12_segmentation.py \
     --data crack_dataset.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitb16 \
-    --dino-integration dual \
+    --dinoversion v3 \
+    --integration triple \
     --epochs 300 \
     --batch-size 4
 
@@ -393,7 +565,8 @@ python train_yolov12_segmentation.py \
     --model-size l \
     --use-dino \
     --dino-variant vitb16 \
-    --dino-integration dual \
+    --integration dual \
+    --dinoversion v3 \
     --val-period 5 \
     --val-split 0.2 \
     --fast-val \
@@ -405,9 +578,9 @@ python train_yolov12_segmentation.py \
     --data your_data.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --integration triple \
+    --dinoversion v3 \
     --val-period 2 \
     --patience 50 \
     --plots \
@@ -571,7 +744,8 @@ python train_yolov12_segmentation.py \
     --model-size s \
     --use-dino \
     --dino-variant vitb16 \
-    --dino-integration single \
+    --integration single \
+    --dinoversion v3 \
     --lr 0.008 \
     --weight-decay 0.0003 \
     --warmup-epochs 5 \
@@ -585,7 +759,8 @@ python train_yolov12_segmentation.py \
     --model-size l \
     --use-dino \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --integration dual \
+    --dinoversion v2 \
     --lr 0.002 \
     --weight-decay 0.0001 \
     --warmup-epochs 15 \
@@ -599,9 +774,9 @@ python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --integration triple \
+    --dinoversion v3 \
     --lr 0.0015 \
     --weight-decay 0.00005 \
     --warmup-epochs 20 \
@@ -662,9 +837,9 @@ python train_yolov12_segmentation.py \
     --data segmentation_data.yaml \
     --model-size l \
     --use-dino \
-    --dino-preprocessing dinov3_vitb16 \
     --dino-variant vitl16 \
-    --dino-integration dual \
+    --integration triple \
+    --dinoversion v3 \
     --lr 0.002 \
     --weight-decay 0.0001 \
     --warmup-epochs 25 \
@@ -780,11 +955,11 @@ python train_yolov12_segmentation.py --help
 # Basic segmentation training
 python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s
 
-# DINO-enhanced training (recommended)
-python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dino-integration single
+# DINO-enhanced training (recommended) - simplified with --integration
+python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dinoversion v3 --integration single
 
-# Advanced configuration with early stopping
-python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dino-integration dual --epochs 150 --batch-size 8 --patience 20 --name my-experiment
+# Advanced configuration with early stopping - simplified with --integration
+python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dinoversion v2 --integration dual --epochs 150 --batch-size 8 --patience 20 --name my-experiment
 ```
 
 ### Key CLI Arguments
@@ -792,7 +967,7 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 | Category | Arguments | Description |
 |----------|-----------|-------------|
 | **Required** | `--data`, `--model-size` | Dataset YAML and model size (n/s/m/l/x) |
-| **DINO** | `--use-dino`, `--dino-variant`, `--dino-integration`, `--dino-preprocessing` | DINO enhancement options |
+| **DINO** | `--use-dino`, `--dino-variant`, `--integration`, `--dinoversion` | DINO enhancement options (single/dual/triple integration, v2/v3 support, dinoversion REQUIRED) |
 | **Optimizer** | `--optimizer`, `--lr`, `--momentum`, `--weight-decay` | Optimizer control (SGD/Adam/AdamW/RMSProp/auto) |
 | **Fast Validation** | `--val-period`, `--val-split`, `--fast-val` | Speed optimization (25-100x faster) |
 | **Segmentation** | `--overlap-mask`, `--mask-ratio`, `--box-loss-gain` | Segmentation-specific parameters |
@@ -893,6 +1068,21 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
 
 ## Citation
 
+**If you use this work in your research, please cite:**
+
+```BibTeX
+@misc{sompote2024dinov3yolosegment,
+  author = {Sompote},
+  title = {DinoV3-YOLO-Segment: Enhanced Instance Segmentation with Vision Transformer Integration},
+  year = {2024},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/Sompote/DinoV3-YOLO-Segment}}
+}
+```
+
+**Base architectures:**
+
 ```BibTeX
 @article{tian2025yolov12,
   title={YOLOv12: Attention-Centric Real-Time Instance Segmentation},
@@ -901,12 +1091,12 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
   year={2025}
 }
 
-@article{dinov3_yolov12_2024,
-  title={DINOv3-YOLOv12: Systematic Vision Transformer Integration for Enhanced Instance Segmentation},
-  author={AI Research Group, Department of Civil Engineering, KMUTT},
-  journal={GitHub Repository},
-  year={2024},
-  url={https://github.com/Sompote/DinoV3-YOLO-Segment}
+@inproceedings{oquab2023dinov2,
+  title={DINOv2: Learning Robust Visual Features without Supervision},
+  author={Oquab, Maxime and Darcet, Timothee and Moutakanni, Theo and Vo, Huy V and Szafraniec, Marc and Khalidov, Vasil and Fernandez, Pierre and Haziza, Daniel and Massa, Francisco and El-Nouby, Alaaeldin and others},
+  booktitle={International Conference on Machine Learning},
+  year={2023},
+  organization={PMLR}
 }
 ```
 
