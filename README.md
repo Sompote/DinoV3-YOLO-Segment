@@ -124,7 +124,21 @@ export HUGGINGFACE_HUB_TOKEN="your_token_here"
 # Required permissions when creating token:
 #   - Read access to contents of all repos under your personal namespace
 #   - Read access to contents of all public gated repos you can access
-# Alternative: hf auth login
+
+# Alternative: Interactive login
+hf auth login
+# Expected output:
+#     _|    _|  _|    _|    _|_|_|    _|_|_|  _|_|_|  _|      _|    _|_|_|      _|_|_|_|    _|_|      _|_|_|  _|_|_|_|
+#     _|    _|  _|    _|  _|        _|          _|    _|_|    _|  _|            _|        _|    _|  _|        _|
+#     _|_|_|_|  _|    _|  _|  _|_|  _|  _|_|    _|    _|  _|  _|  _|  _|_|      _|_|_|    _|_|_|_|  _|        _|_|_|
+#     _|    _|  _|    _|  _|    _|  _|    _|    _|    _|    _|_|  _|    _|      _|        _|    _|  _|        _|
+#     _|    _|    _|_|      _|_|_|    _|_|_|  _|_|_|  _|      _|    _|_|_|      _|        _|    _|    _|_|_|  _|_|_|_|
+# 
+#     To log in, `huggingface_hub` requires a token generated from https://huggingface.co/settings/tokens .
+# Enter your token (input will not be visible): 
+# Add token as git credential? (Y/n) Y
+# Token is valid (permission: fineGrained).
+# The token `hf2` has been saved to /workspace/.hf_home/stored_tokens
 
 # Verify installation
 python -c "from ultralytics.nn.modules.block import DINO3Backbone; print('✅ YOLOv12 Segmentation ready!')"
