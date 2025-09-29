@@ -5,18 +5,21 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
 [![Segmentation](https://img.shields.io/badge/Task-Instance%20Segmentation-purple.svg)](https://docs.ultralytics.com/tasks/segment/)
 
-**Complete YOLOv12 instance segmentation model family with DINOv3 enhancement for superior feature extraction and pixel-perfect mask prediction.**
+**Complete YOLOv12 instance segmentation model family with true DINOv3 enhancement for superior feature extraction and pixel-perfect mask prediction.**
+
+> **🆕 Latest Update**: **NEW DualP0P3 Integration Mode** (`--integration dualp0p3`) - optimal balance for satellite imagery! Plus official DINOv3 models from Hugging Face with `--dinoversion v3`.
 
 ## 🎯 Overview
 
-This repository provides **20 YOLOv12 segmentation model variants** combining YOLOv12's efficient architecture with DINOv3's advanced vision transformer features for state-of-the-art **instance segmentation** performance with precise mask prediction.
+This repository provides **25 YOLOv12 segmentation model variants** combining YOLOv12's efficient architecture with DINOv3's advanced vision transformer features for state-of-the-art **instance segmentation** performance with precise mask prediction.
 
 ### ✨ Key Features
 
 - 🎭 **Instance Segmentation**: Pixel-perfect mask prediction with 32 prototypes
-- 🏗️ **Complete Model Family**: 5 sizes (nano, small, medium, large, x-large) × 4 variants = 20 models
-- 🔬 **DINO Integration**: Multiple DINOv3 enhancement strategies including **Triple Integration** (P0+P3+P4)
-- 🔄 **DINO Version Support**: Choose between DINOv2 and DINOv3 with `--dinoversion` parameter
+- 🏗️ **Complete Model Family**: 5 sizes (nano, small, medium, large, x-large) × 5 integration modes = 25 models
+- 🔬 **DINO Integration**: Five enhancement strategies from **Single** (P4) to **Triple** (P0+P3+P4), including the new **DualP0P3** (P0+P3)
+- 🔄 **True DINOv3 Support**: Official DINOv3 models with superior performance via `--dinoversion v3`
+- 🛰️ **Satellite Imagery Optimized**: SAT-493M pretrained models for aerial/satellite segmentation
 - 📐 **Precise Masks**: Advanced segmentation head with prototype-based mask generation
 - ⚡ **Optimized Performance**: Balanced speed/accuracy across different model sizes
 - 🚀 **Fast Training**: 50-100x faster validation with smart optimization strategies
@@ -26,13 +29,13 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 
 ## 📊 Model Variants
 
-| Category | Description | Models | DINO Integration | Output |
-|----------|-------------|--------|------------------|--------|
-| **Standard** | Base YOLOv12 segmentation | 5 variants | None | Instance Masks |
-| **Single-Scale** | DINO at P4 feature level | 5 variants | P4 enhancement | Enhanced Masks |
-| **Dual-Scale** | DINO at P3 and P4 levels | 5 variants | P3 + P4 enhancement | Multi-scale Masks |
-| **Preprocessing** | DINO at input level | 5 variants | Input preprocessing | Refined Masks |
-| **🚀 Triple** | Ultimate performance | 5 variants | P0 + P3 + P4 enhancement | Maximum Masks |
+| Category | Description | Models | DINO Integration | CLI Usage |
+|----------|-------------|--------|------------------|-----------|
+| **Standard** | Base YOLOv12 segmentation | 5 variants | None | No `--use-dino` flag |
+| **Single** | DINO at P4 feature level | 5 variants | P4 enhancement | `--integration single` |
+| **Dual** | DINO at P3 and P4 levels | 5 variants | P3 + P4 enhancement | `--integration dual` |
+| **🔄 DualP0P3** | Balanced preprocessing + backbone | 5 variants | P0 + P3 enhancement | `--integration dualp0p3` |
+| **🚀 Triple** | Ultimate performance | 5 variants | P0 + P3 + P4 enhancement | `--integration triple` |
 
 ### 🏆 Segmentation Performance Specifications
 
@@ -44,61 +47,167 @@ This repository provides **20 YOLOv12 segmentation model variants** combining YO
 | YOLOv12l-seg | 43.2 | 64.5 | 7.61 | 28.8M | Very High |
 | YOLOv12x-seg | 44.2 | 65.3 | 15.43 | 64.5M | Excellent |
 
-> **Note**: DINO-enhanced variants show 2-5% mask mAP improvements with enhanced boundary precision.
+> **Note**: DINO-enhanced variants show 2-5% mask mAP improvements with enhanced boundary precision. **DINOv3 models provide superior performance over DINOv2 with better feature extraction.**
+
+## 🔄 NEW: DualP0P3 Integration Mode
+
+The **DualP0P3** integration mode (`--integration dualp0p3`) provides a balanced approach between performance and memory efficiency:
+
+### 🎯 Architecture Overview
+```
+Input Image → DINO3Preprocessor (P0) → Enhanced Features → YOLOv12 Backbone → DINO3Backbone (P3) → Segmentation Head
+```
+
+### ✨ Key Benefits
+- **🔧 Balanced Performance**: Combines preprocessing enhancement with P3-level feature extraction
+- **💾 Memory Efficient**: Lower memory usage than triple integration while maintaining high performance  
+- **🛰️ Satellite Optimized**: Particularly effective with SAT-493M models for aerial/satellite imagery
+- **⚡ Fast Training**: Faster than triple integration, better feature extraction than dual integration
+
+### 📊 Integration Mode Comparison
+
+| Mode | Integration Points | Memory | Performance | Speed | Best Use Case |
+|------|-------------------|--------|-------------|--------|---------------|
+| **Single** | P4 only | 🟢 Low | 🟡 Good | 🟢 Fast | General tasks, development |
+| **Dual** | P3 + P4 | 🟡 Medium | 🟢 High | 🟡 Medium | Dense scenes, small objects |
+| **🔄 DualP0P3** | P0 + P3 | 🟡 Medium | 🟢 High | 🟡 Medium | **Satellite imagery, balanced needs** |
+| **Triple** | P0 + P3 + P4 | 🔴 High | 🟢 Maximum | 🔴 Slow | Research, maximum accuracy |
+
+### 🚀 Quick Start with DualP0P3
+
+```bash
+# Standard segmentation with DualP0P3
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size s \
+    --use-dino \
+    --dino-variant vitb16 \
+    --integration dualp0p3 \
+    --dinoversion v3
+
+# Satellite imagery segmentation (recommended)
+python train_yolov12_segmentation.py \
+    --data satellite_data.yaml \
+    --model-size m \
+    --use-dino \
+    --dino-variant vitl16_distilled \
+    --integration dualp0p3 \
+    --dinoversion v3
+```
 
 ## 🔄 DINO Version Support
 
-This implementation supports both **DINOv2** and **DINOv3** models for maximum flexibility and compatibility:
+This implementation supports both **DINOv2** and **DINOv3** models for maximum flexibility and cutting-edge performance:
 
 ### Version Selection
 
 | Version | Description | Compatibility | Recommended Use |
 |---------|-------------|---------------|-----------------|
 | **DINOv2** (`--dinoversion v2`) | Stable, widely tested | Full Hugging Face support | Production, proven performance |
-| **DINOv3** (`--dinoversion v3`) | Latest features, improved performance | Limited availability | Research, cutting-edge projects |
+| **DINOv3** (`--dinoversion v3`) | **🚀 Latest features, superior performance** | **✅ Full support via Hugging Face** | **Recommended for best results** |
+
+> **🎉 New**: DINOv3 models are now fully supported using official `facebook/dinov3-*-pretrain-lvd1689m` models from Hugging Face!
 
 ### Available ViT Variants
 
-| Variant | Parameters | Embed Dim | Dataset | Description | Memory Usage | Recommended For |
-|---------|------------|-----------|---------|-------------|--------------|-----------------|
-| `vits16` | 21M | 384 | LVD-142M | Small, fast | Low | Development, testing |
-| `vitb16` | 86M | 768 | LVD-142M | Balanced | Medium | General use, production |
-| `vitl16` | 300M | 1024 | LVD-142M | Large, high-performance | High | High-accuracy needs |
-| `vitl16_distilled` | 300M | 1024 | SAT-493M | ViT-L/16 Distilled (Satellite) | High | Optimized performance |
-| `vith16_plus` | 840M | 1536 | LVD-1689M | ViT-H+/16 Distilled | Very High | Maximum performance |
-| `vit7b16` | 6716M | 4096 | SAT-493M | ViT-7B/16 (Satellite) | Extreme | Research, cutting-edge |
-| `vit7b16_lvd` | 6716M | 4096 | LVD-1689M | ViT-7B/16 (Standard) | Extreme | Research, maximum scale |
+| Variant | DINOv2 | DINOv3 | Parameters | Embed Dim | Dataset | Description | Memory | Recommended For |
+|---------|--------|--------|------------|-----------|---------|-------------|--------|-----------------|
+| `vits16` | ✅ | ✅ | 21M | 384 | LVD-1689M | Small, fast | Low | Development, testing |
+| `vitb16` | ✅ | ✅ | 86M | 768 | LVD-1689M | Balanced | Medium | **General use, production** |
+| `vitl16` | ✅ | ✅ | 300M | 1024 | LVD-1689M | Large, high-performance | High | High-accuracy needs |
+| `vitl16_distilled` | ✅ | ✅ | 300M | 1024 | **SAT-493M** | ViT-L/16 Distilled (Satellite) | High | **Satellite/aerial imagery** |
+| `vith16_plus` | ✅ | ✅ | 840M | 1536 | LVD-1689M | ViT-H+/16 Distilled | Very High | Maximum performance |
+| `vit7b16` | ✅ | ✅ | 6,716M | 4096 | **SAT-493M** | ViT-7B/16 (Satellite) | Extreme | **Satellite imagery, research** |
+| `vit7b16_lvd` | ✅ | ✅ | 6,716M | 4096 | LVD-1689M | ViT-7B/16 (Standard) | Extreme | Research, maximum scale |
 
 #### Dataset Information
-- **LVD-142M**: Large Vision Dataset with 142M images - standard training dataset
-- **LVD-1689M**: Large Vision Dataset with 1.689B images - enhanced training for larger models  
-- **SAT-493M**: Satellite Dataset with 493M images - specialized distillation training on satellite imagery
+- **LVD-1689M**: Large Vision Dataset with 1.689B images - **DINOv3 standard training dataset**
+- **SAT-493M**: Satellite Dataset with 493M images - **Specialized for satellite/aerial imagery**
+- **Note**: Most DINOv3 models use LVD-1689M for general-purpose vision, while SAT-493M models are optimized for satellite and aerial imagery tasks
 
 ### Usage
 
 ```bash
-# Use DINOv2 (stable, widely compatible)
+# Single Integration: DINO enhancement at P4 level (DINOv2)
 python train_yolov12_segmentation.py \
-    --data data.yaml \
+    --data segmentation_data.yaml \
     --model-size s \
     --use-dino \
     --dino-variant vitb16 \
-    --dinoversion v2 \
-    --integration single
+    --integration single \
+    --dinoversion v2
 
-# Use DINOv3 (latest features)  
+# Dual Integration: DINO enhancement at P3+P4 levels (DINOv3)
 python train_yolov12_segmentation.py \
-    --data data.yaml \
-    --model-size s \
+    --data segmentation_data.yaml \
+    --model-size l \
     --use-dino \
-    --dino-variant vitb16 \
-    --dinoversion v3 \
-    --integration dual
+    --dino-variant vitl16 \
+    --integration dual \
+    --dinoversion v3
+
+# DualP0P3 Integration: DINO enhancement at P0+P3 levels (Balanced)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16 \
+    --integration dualp0p3 \
+    --dinoversion v3
+
+# Triple Integration: DINO enhancement at P0+P3+P4 levels (Ultimate Performance)
+python train_yolov12_segmentation.py \
+    --data segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16 \
+    --integration triple \
+    --dinoversion v3
+
+# Satellite/Aerial Imagery: Use SAT-493M pretrained models for optimal performance
+python train_yolov12_segmentation.py \
+    --data satellite_segmentation_data.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16_distilled \
+    --integration dual \
+    --dinoversion v3
+
+# Large-scale Satellite Imagery: ViT-7B/16 for maximum accuracy
+python train_yolov12_segmentation.py \
+    --data satellite_segmentation_data.yaml \
+    --model-size x \
+    --use-dino \
+    --dino-variant vit7b16 \
+    --integration dual \
+    --dinoversion v3
 ```
 
-> **Important**: The `--dinoversion` parameter is **REQUIRED** when using `--use-dino` to avoid any confusion about which DINO version is being used.
+> **Important**: The `--dinoversion` parameter is **REQUIRED** when using `--use-dino` to specify which DINO version to use.
 
-> **Note**: Currently, both versions load DINOv2 models from Hugging Face as DINOv3 models are not yet officially available there. The infrastructure is ready for DINOv3 when they become available.
+> **💡 Tip**: For satellite/aerial imagery segmentation, use `vitl16_distilled` or `vit7b16` variants which are pretrained on SAT-493M dataset for optimal performance on overhead imagery.
+
+### 🔐 DINOv3 Authentication Requirements
+
+DINOv3 models require Hugging Face authentication as they are gated models. You need to:
+
+1. **Request Access**: Visit [DINOv3 model pages](https://huggingface.co/facebook/dinov3-vitb16-pretrain-lvd1689m) and request access
+2. **Get Approval**: Approval typically takes 5-15 minutes
+3. **Set up Authentication**: Use one of the methods below
+
+#### Method 1: Environment Variable
+```bash
+export HF_TOKEN="your_hf_token_here"
+# or
+export HUGGING_FACE_HUB_TOKEN="your_hf_token_here"
+```
+
+#### Method 2: Hugging Face CLI
+```bash
+huggingface-cli login
+```
+
+> **Note**: DINOv2 models work without authentication, while DINOv3 models provide superior performance but require the setup above.
 
 ## 🚀 Quick Start
 
@@ -115,18 +224,16 @@ conda activate yolov12-segment
 
 # Install dependencies
 pip install -r requirements.txt
-pip install transformers  # For DINOv3 models
+pip install transformers  # For DINO models
 pip install -e .
 
 # 4. Setup Hugging Face authentication (REQUIRED for DINOv3 models)
-export HUGGINGFACE_HUB_TOKEN="your_token_here"
+# Method 1: Environment variable
+export HF_TOKEN="your_token_here"
 # Get your token from: https://huggingface.co/settings/tokens
-# Required permissions when creating token:
-#   - Read access to contents of all repos under your personal namespace
-#   - Read access to contents of all public gated repos you can access
 
-# Alternative: Interactive login
-hf auth login
+# Method 2: Interactive login  
+huggingface-cli login
 # Expected output:
 #     _|    _|  _|    _|    _|_|_|    _|_|_|  _|_|_|  _|      _|    _|_|_|      _|_|_|_|    _|_|      _|_|_|  _|_|_|_|
 #     _|    _|  _|    _|  _|        _|          _|    _|_|    _|  _|            _|        _|    _|  _|        _|
@@ -282,6 +389,81 @@ python train_yolov12_segmentation.py \
     --val-split 0.3 \
     --epochs 300
 ```
+
+## 🛰️ Specialized Use Cases
+
+### Satellite & Aerial Imagery Segmentation
+
+For optimal performance on satellite, aerial, or overhead imagery, use models pretrained on the **SAT-493M** dataset:
+
+#### Recommended Configurations
+
+| Use Case | Model Variant | Parameters | Integration | Best For |
+|----------|---------------|------------|-------------|----------|
+| **Standard Satellite** | `vitl16_distilled` | 300M | `dual` | General satellite imagery |
+| **🔄 Balanced Satellite** | `vitl16_distilled` | 300M | `dualp0p3` | **Optimal memory/performance balance** |
+| **High-Resolution Aerial** | `vit7b16` | 6,716M | `dual` | Ultra-high detail requirements |
+| **🔄 Efficient High-Res** | `vit7b16` | 6,716M | `dualp0p3` | **Large models with memory constraints** |
+| **Fast Satellite Processing** | `vitl16_distilled` | 300M | `single` | Real-time applications |
+
+#### Example Training Commands
+
+```bash
+# Standard satellite imagery segmentation
+python train_yolov12_segmentation.py \
+    --data satellite_dataset.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16_distilled \
+    --integration dual \
+    --dinoversion v3 \
+    --epochs 200
+
+# 🔄 NEW: Balanced satellite imagery (recommended for most use cases)
+python train_yolov12_segmentation.py \
+    --data satellite_dataset.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vitl16_distilled \
+    --integration dualp0p3 \
+    --dinoversion v3 \
+    --epochs 200
+
+# Ultra-high resolution aerial imagery (research/precision applications)
+python train_yolov12_segmentation.py \
+    --data aerial_dataset.yaml \
+    --model-size x \
+    --use-dino \
+    --dino-variant vit7b16 \
+    --integration dual \
+    --dinoversion v3 \
+    --batch-size 2 \
+    --epochs 300
+
+# 🔄 NEW: Efficient high-resolution with ViT-7B (memory optimized)
+python train_yolov12_segmentation.py \
+    --data aerial_dataset.yaml \
+    --model-size l \
+    --use-dino \
+    --dino-variant vit7b16 \
+    --integration dualp0p3 \
+    --dinoversion v3 \
+    --batch-size 4 \
+    --epochs 250
+```
+
+> **📡 Why SAT-493M Models?** These variants are specifically trained on 493M satellite images, making them particularly effective for:
+> - **Land use classification segmentation**
+> - **Urban planning and infrastructure mapping**
+> - **Agricultural field boundary detection**
+> - **Environmental monitoring and change detection**
+> - **Disaster assessment and damage mapping**
+
+> **🔄 DualP0P3 + SAT-493M**: The combination of DualP0P3 integration with SAT-493M models provides optimal balance for satellite imagery:
+> - **Lower memory usage** than triple integration while maintaining **high accuracy**
+> - **Enhanced preprocessing** specifically tuned for satellite imagery characteristics
+> - **Improved P3-level features** for better boundary detection in aerial views
+> - **Recommended for production satellite segmentation** workflows
 
 ## 📊 Training Results - Crack Segmentation
 
@@ -922,13 +1104,13 @@ python train_yolov12_segmentation.py \
 
 ### 🎭 **Segmentation Model Configs**
 
-| Model Size | Standard | DINO Single | DINO Dual | DINO Preprocessing |
-|------------|----------|-------------|-----------|-------------------|
-| **Nano** | `yolov12n-seg.yaml` | `yolov12n-dino3-vitb16-single-seg.yaml` | `yolov12n-dino3-vitb16-dual-seg.yaml` | `yolov12n-dino3-preprocess-seg.yaml` |
-| **Small** | `yolov12s-seg.yaml` | `yolov12s-dino3-vitb16-single-seg.yaml` | `yolov12s-dino3-vitb16-dual-seg.yaml` | `yolov12s-dino3-preprocess-seg.yaml` |
-| **Medium** | `yolov12m-seg.yaml` | `yolov12m-dino3-vitb16-single-seg.yaml` | `yolov12m-dino3-vitb16-dual-seg.yaml` | `yolov12m-dino3-preprocess-seg.yaml` |
-| **Large** | `yolov12l-seg.yaml` | `yolov12l-dino3-vitb16-single-seg.yaml` | `yolov12l-dino3-vitb16-dual-seg.yaml` | `yolov12l-dino3-preprocess-seg.yaml` |
-| **Extra** | `yolov12x-seg.yaml` | `yolov12x-dino3-vitb16-single-seg.yaml` | `yolov12x-dino3-vitb16-dual-seg.yaml` | `yolov12x-dino3-preprocess-seg.yaml` |
+| Model Size | Standard | Single Integration | Dual Integration | Triple Integration |
+|------------|----------|-------------------|------------------|-------------------|
+| **Nano** | `yolov12n-seg.yaml` | `yolov12n-dino3-vitb16-single-seg.yaml` | `yolov12n-dino3-vitb16-dual-seg.yaml` | Uses dual + preprocessing |
+| **Small** | `yolov12s-seg.yaml` | `yolov12s-dino3-vitb16-single-seg.yaml` | `yolov12s-dino3-vitb16-dual-seg.yaml` | Uses dual + preprocessing |
+| **Medium** | `yolov12m-seg.yaml` | `yolov12m-dino3-vitb16-single-seg.yaml` | `yolov12m-dino3-vitb16-dual-seg.yaml` | Uses dual + preprocessing |
+| **Large** | `yolov12l-seg.yaml` | `yolov12l-dino3-vitb16-single-seg.yaml` | `yolov12l-dino3-vitb16-dual-seg.yaml` | Uses dual + preprocessing |
+| **Extra** | `yolov12x-seg.yaml` | `yolov12x-dino3-vitb16-single-seg.yaml` | `yolov12x-dino3-vitb16-dual-seg.yaml` | Uses dual + preprocessing |
 
 ### 📊 **Results & Assets**
 
@@ -980,6 +1162,9 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 # DINO-enhanced training (recommended) - simplified with --integration
 python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dinoversion v3 --integration single
 
+# 🔄 NEW: DualP0P3 integration (balanced performance/memory)
+python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --dinoversion v3 --integration dualp0p3
+
 # Advanced configuration with early stopping - simplified with --integration
 python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --dinoversion v2 --integration dual --epochs 150 --batch-size 8 --patience 20 --name my-experiment
 ```
@@ -989,7 +1174,7 @@ python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size 
 | Category | Arguments | Description |
 |----------|-----------|-------------|
 | **Required** | `--data`, `--model-size` | Dataset YAML and model size (n/s/m/l/x) |
-| **DINO** | `--use-dino`, `--dino-variant`, `--integration`, `--dinoversion` | DINO enhancement options (single/dual/triple integration, v2/v3 support, dinoversion REQUIRED) |
+| **DINO** | `--use-dino`, `--dino-variant`, `--integration`, `--dinoversion` | DINO enhancement options (single/dual/dualp0p3/triple integration, v2/v3 support, dinoversion REQUIRED) |
 | **Optimizer** | `--optimizer`, `--lr`, `--momentum`, `--weight-decay` | Optimizer control (SGD/Adam/AdamW/RMSProp/auto) |
 | **Fast Validation** | `--val-period`, `--val-split`, `--fast-val` | Speed optimization (25-100x faster) |
 | **Segmentation** | `--overlap-mask`, `--mask-ratio`, `--box-loss-gain` | Segmentation-specific parameters |
@@ -1020,33 +1205,39 @@ ultralytics/cfg/models/v12/
 │   ├── yolov12m-dino3-vitb16-dual-seg.yaml
 │   ├── yolov12l-dino3-vitb16-dual-seg.yaml
 │   └── yolov12x-dino3-vitb16-dual-seg.yaml
-└── Preprocessing DINO
-    ├── yolov12n-dino3-preprocess-seg.yaml
-    ├── yolov12s-dino3-preprocess-seg.yaml
-    ├── yolov12m-dino3-preprocess-seg.yaml
-    ├── yolov12l-dino3-preprocess-seg.yaml
-    └── yolov12x-dino3-preprocess-seg.yaml
+├── 🔄 DualP0P3 Integration (uses preprocessing configs + P3 enhancement)
+│   ├── Built from preprocessing configs + automatic P3 enhancement
+│   └── Configured via --integration dualp0p3
+└── Triple Integration (uses dual configs + preprocessing)
+    ├── Built from dual configs + automatic preprocessing
+    └── Configured via --integration triple
 ```
 
 ### Integration Approaches
 
-#### 🔹 Single-Scale Enhancement
+#### 🔹 Single Integration (`--integration single`)
 - **Integration Point**: P4 feature level (40×40 feature maps)
+- **CLI Usage**: `--use-dino --dino-variant vitb16 --integration single --dinoversion v3`
 - **Benefits**: Enhanced mask boundary precision, improved medium instance segmentation
-- **Segmentation Use Case**: General-purpose instance segmentation with cleaner mask edges
-- **Best For**: Medium instances 32-96 pixels, balanced accuracy/speed
+- **Best For**: Balanced accuracy/speed, medium instances 32-96 pixels
 
-#### 🔹 Dual-Scale Enhancement
+#### 🔹 Dual Integration (`--integration dual`)
 - **Integration Points**: P3 (80×80) and P4 (40×40) feature levels
+- **CLI Usage**: `--use-dino --dino-variant vitl16 --integration dual --dinoversion v3`
 - **Benefits**: Multi-scale mask generation, enhanced small instance segmentation
-- **Segmentation Use Case**: Complex scenes with overlapping instances of various sizes
 - **Best For**: Dense scenes, small instances, maximum mask accuracy
 
-#### 🔹 Preprocessing Enhancement
-- **Integration Point**: Input level (P0) before backbone
-- **Benefits**: Enhanced input features for all downstream mask prediction layers
-- **Segmentation Use Case**: Universal mask quality improvement across all instance sizes
-- **Best For**: Stable training, consistent mask improvements
+#### 🔄 DualP0P3 Integration (`--integration dualp0p3`)
+- **Integration Points**: P0 (input preprocessing) + P3 (80×80) feature level
+- **CLI Usage**: `--use-dino --dino-variant vitl16 --integration dualp0p3 --dinoversion v3`
+- **Benefits**: Balanced preprocessing enhancement with P3 feature extraction
+- **Best For**: Moderate memory usage, improved feature extraction, satellite imagery
+
+#### 🚀 Triple Integration (`--integration triple`)
+- **Integration Points**: P0 (input preprocessing) + P3 + P4 feature levels
+- **CLI Usage**: `--use-dino --dino-variant vitl16 --integration triple --dinoversion v3`
+- **Benefits**: Ultimate performance with input enhancement and multi-scale features
+- **Best For**: Maximum accuracy requirements, research applications
 
 ## Validation
 
@@ -1087,6 +1278,55 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
 **Official DINOv3 Integration**: This implementation uses **official DINOv3 models** directly from Meta's Facebook Research repository: [facebookresearch/dinov3](https://github.com/facebookresearch/dinov3). The integration includes comprehensive support for all official DINOv3 variants and the innovative `--dino-input` parameter for custom model loading.
 
 **YOLOv12**: Based on the official YOLOv12 implementation with attention-centric architecture from [sunsmarterjie/yolov12](https://github.com/sunsmarterjie/yolov12).
+
+## 🔄 Integration Modes Summary
+
+This repository provides **5 distinct integration strategies** for combining DINO with YOLOv12 segmentation, each optimized for different use cases:
+
+### 📊 Complete Integration Overview
+
+| Integration Mode | Points | Memory | Performance | Speed | Training Time | Best Use Case |
+|------------------|--------|---------|-------------|--------|---------------|---------------|
+| **Standard** | None | 🟢 Lowest | 🟡 Baseline | 🟢 Fastest | 🟢 Shortest | Development, testing |
+| **Single** | P4 | 🟢 Low | 🟡 Good | 🟢 Fast | 🟢 Short | General tasks, production |
+| **Dual** | P3+P4 | 🟡 Medium | 🟢 High | 🟡 Medium | 🟡 Medium | Dense scenes, small objects |
+| **🔄 DualP0P3** | P0+P3 | 🟡 Medium | 🟢 High | 🟡 Medium | 🟡 Medium | **Satellite imagery, balanced** |
+| **Triple** | P0+P3+P4 | 🔴 High | 🟢 Maximum | 🔴 Slow | 🔴 Long | Research, maximum accuracy |
+
+### 🎯 Integration Mode Recommendations
+
+#### 🏭 **Production Environments**
+- **General Segmentation**: `--integration single` or `--integration dual`
+- **Satellite/Aerial Imagery**: `--integration dualp0p3` ⭐ **Recommended**
+- **Real-time Applications**: `--integration single`
+
+#### 🔬 **Research & Development**
+- **Maximum Accuracy**: `--integration triple`
+- **Balanced Exploration**: `--integration dualp0p3`
+- **Memory-Constrained Research**: `--integration dualp0p3`
+
+#### 🛰️ **Specialized Applications**
+- **Satellite Imagery Segmentation**: `--integration dualp0p3` with `vitl16_distilled`
+- **High-Resolution Aerial Photography**: `--integration dualp0p3` with `vit7b16`
+- **Environmental Monitoring**: `--integration dualp0p3` + SAT-493M models
+
+### 🚀 Quick Command Reference
+
+```bash
+# 🔄 DualP0P3 - Recommended for most satellite/aerial use cases
+python train_yolov12_segmentation.py --data your_data.yaml --model-size s --use-dino --dino-variant vitl16_distilled --integration dualp0p3 --dinoversion v3
+
+# 🏆 Triple - Maximum performance (high memory)
+python train_yolov12_segmentation.py --data your_data.yaml --model-size s --use-dino --dino-variant vitl16 --integration triple --dinoversion v3
+
+# ⚡ Single - Fast and efficient
+python train_yolov12_segmentation.py --data your_data.yaml --model-size s --use-dino --dino-variant vitb16 --integration single --dinoversion v3
+
+# 🎯 Dual - High performance multi-scale
+python train_yolov12_segmentation.py --data your_data.yaml --model-size s --use-dino --dino-variant vitl16 --integration dual --dinoversion v3
+```
+
+> **🔄 New**: The **DualP0P3** integration mode provides the optimal balance of performance and efficiency, especially for satellite and aerial imagery. It combines the benefits of preprocessing enhancement (P0) with targeted feature extraction at P3 level, making it ideal for production satellite segmentation workflows.
 
 ## Citation
 

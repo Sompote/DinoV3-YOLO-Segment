@@ -57,13 +57,13 @@ def create_segmentation_config_path(model_size, use_dino=False, dino_variant=Non
     
     # Triple integration: preprocessing + backbone integration (ultimate performance)
     if dino_preprocessing and dino_variant:
-        # For triple integration, use the preprocessing config as base and add backbone enhancement
+        # For triple and dualp0p3 integration, use the preprocessing config as base and add backbone enhancement
         # This maintains proper channel flow since preprocessing is already handled
         config_path = f'ultralytics/cfg/models/v12/yolov12{model_size}-dino3-preprocess-seg.yaml'
         if Path(config_path).exists():
             return config_path
         else:
-            # Fallback to generic preprocessing config for triple integration
+            # Fallback to generic preprocessing config for triple/dualp0p3 integration
             return 'ultralytics/cfg/models/v12/yolov12-dino3-preprocess-seg.yaml'
     
     # DINO preprocessing only (input enhancement)
@@ -92,7 +92,7 @@ def create_segmentation_config_path(model_size, use_dino=False, dino_variant=Non
     # Default fallback
     return f'ultralytics/cfg/models/v12/yolov12{model_size}-seg.yaml'
 
-def get_segmentation_batch_size(model_size, use_dino=False, dino_integration='single', is_triple=False):
+def get_segmentation_batch_size(model_size, use_dino=False, dino_integration='single', is_triple=False, is_dualp0p3=False):
     """Get recommended batch size for segmentation training."""
     # Segmentation requires more memory than detection, so reduce batch sizes
     base_batches = {'n': 32, 's': 16, 'm': 8, 'l': 6, 'x': 4}
@@ -102,6 +102,9 @@ def get_segmentation_batch_size(model_size, use_dino=False, dino_integration='si
         # Further reduce for DINO models
         batch = max(batch // 2, 2)
         if dino_integration == 'dual':
+            batch = max(batch // 2, 1)
+        # DualP0P3 integration uses moderate memory (preprocessing + single backbone)
+        if is_dualp0p3:
             batch = max(batch // 2, 1)
         # Triple integration uses even more memory
         if is_triple:
@@ -160,8 +163,8 @@ Examples:
                                    'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large'],
                            help='DINO model variant: ViTs/B/L/L-dist/H+/7B-16/7B-LVD for different model sizes and datasets (required if --use-dino with integration)')
     dino_group.add_argument('--integration', type=str, default='single',
-                           choices=['single', 'dual', 'triple'],
-                           help='DINO integration strategy: single(P4), dual(P3+P4), triple(P0+P3+P4)')
+                           choices=['single', 'dual', 'dualp0p3', 'triple'],
+                           help='DINO integration strategy: single(P4), dual(P3+P4), dualp0p3(P0+P3), triple(P0+P3+P4)')
     dino_group.add_argument('--dino-preprocessing', type=str, default=None,
                            help='DINO preprocessing model (advanced users only - use --integration triple instead)')
     dino_group.add_argument('--dinoversion', type=str, required=False,
@@ -312,6 +315,12 @@ def validate_segmentation_arguments(args):
             if not args.dino_preprocessing:
                 args.dino_preprocessing = None
             LOGGER.info("📐 DUAL INTEGRATION: DINO enhancement at P3+P4 levels")
+        elif args.integration == 'dualp0p3':
+            args.dino_integration = 'single'  # DualP0P3 uses single backbone (P3 only) + preprocessing
+            if not args.dino_preprocessing:
+                args.dino_preprocessing = f"dinov3_{args.dino_variant}"
+            LOGGER.info("🔄 DUALP0P3 INTEGRATION: DINO enhancement at P0+P3 levels")
+            LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} (P3)")
         elif args.integration == 'triple':
             args.dino_integration = 'dual'  # Triple uses dual backbone + preprocessing
             if not args.dino_preprocessing:
@@ -320,7 +329,7 @@ def validate_segmentation_arguments(args):
             LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} (P3+P4)")
         
         # Validate dino_variant is provided for backbone integration
-        if args.integration in ['single', 'dual', 'triple'] and not args.dino_variant:
+        if args.integration in ['single', 'dual', 'dualp0p3', 'triple'] and not args.dino_variant:
             LOGGER.error("❌ --dino-variant is required when using --integration with --use-dino")
             sys.exit(1)
     
@@ -367,11 +376,19 @@ def setup_segmentation_training_parameters(args):
     """Setup segmentation-specific training parameters."""
     # Auto-determine batch size if not specified
     if args.batch_size is None:
-        is_triple = args.dino_preprocessing and args.dino_variant
+        is_triple = args.dino_preprocessing and args.dino_variant and args.integration == 'triple'
+        is_dualp0p3 = args.dino_preprocessing and args.dino_variant and args.integration == 'dualp0p3'
         args.batch_size = get_segmentation_batch_size(
-            args.model_size, args.use_dino, args.dino_integration, is_triple
+            args.model_size, args.use_dino, args.dino_integration, is_triple, is_dualp0p3
         )
-        batch_type = "triple DINO" if is_triple else "DINO" if args.use_dino else "standard"
+        if is_triple:
+            batch_type = "triple DINO"
+        elif is_dualp0p3:
+            batch_type = "dualp0p3 DINO"
+        elif args.use_dino:
+            batch_type = "DINO"
+        else:
+            batch_type = "standard"
         LOGGER.info(f"Auto-determined {batch_type} segmentation batch size: {args.batch_size}")
     
     # Auto-determine epochs if not specified
@@ -465,8 +482,11 @@ def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_s
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     
-    # Determine if this is triple integration
-    is_triple = dino_variant is not None
+    # Determine integration type based on preprocessing and backbone integration
+    has_preprocessing = dino_preprocessing is not None
+    has_backbone = dino_variant is not None
+    is_triple = has_preprocessing and has_backbone and dino_integration == 'dual'
+    is_dualp0p3 = has_preprocessing and has_backbone and dino_integration == 'single'
     
     if is_triple:
         print("🚀 Configuring TRIPLE DINO3 Segmentation Integration...")
@@ -535,6 +555,60 @@ def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_s
                                 config['head'][i][0] = layer[0] + 1
                     
                     print(f"   🔧 Updated head layer references for dual backbone insertion")
+            
+            print(f"   ✅ DINO Version: {dino_version} (applied to all DINO modules)")
+            print(f"   🔧 Using preprocessing config as base to maintain channel flow")
+        
+    elif is_dualp0p3:
+        print("🔄 Configuring DUALP0P3 DINO3 Segmentation Integration...")
+        print("   📐 P0 (Preprocessing) + P3 (Backbone) Enhancement")
+        
+        # For dualp0p3 integration with preprocessing config, add DINO3Backbone layer only at P3
+        # This maintains proper channel flow since preprocessing is already handled in the config
+        if 'backbone' in config and config['backbone']:
+            # Find and update the existing DINO3Preprocessor layer
+            for i, layer in enumerate(config['backbone']):
+                if len(layer) >= 4 and layer[2] == 'DINO3Preprocessor':
+                    # Update preprocessor with the specified variant
+                    # Format: [model_name, freeze_backbone, output_channels]
+                    if len(layer[3]) >= 1:
+                        config['backbone'][i][3][0] = dino_preprocessing
+                        # Keep freeze_backbone setting (layer[3][1]) 
+                        config['backbone'][i][3][1] = freeze_dino
+                        # Keep output_channels as 3 (layer[3][2])
+                        # dino_version will default to 'v3' in constructor
+                    print(f"   ✅ P0 Enhancement: {dino_preprocessing} (updated existing preprocessor)")
+                    break
+            
+            # Add DINO3Backbone layer only at P3 position for dualp0p3 integration
+            # Determine output channels based on model size
+            if model_size == 'n':
+                p3_channels = 128  # After scaling: 512 * 0.25 = 128
+            elif model_size == 's':
+                p3_channels = 256  # After scaling: 512 * 0.5 = 256
+            else:
+                p3_channels = 512  # Full scale
+            
+            # Insert DINO3Backbone after P3 layer (layer 5 in preprocessor config)
+            if len(config['backbone']) > 5:
+                p3_layer = [5, 1, 'DINO3Backbone', [dino_variant, freeze_dino, p3_channels]]
+                config['backbone'].insert(6, p3_layer)
+                print(f"   ✅ P3 Enhancement: {dino_variant} (inserted after layer 5)")
+            
+            # Update head layer references to account for the one new layer
+            if 'head' in config:
+                for i, layer in enumerate(config['head']):
+                    # Update layer references that point to backbone layers after insertion point
+                    if isinstance(layer[0], list):
+                        # Handle multi-input layers like Concat and Segment
+                        for j, ref in enumerate(layer[0]):
+                            if isinstance(ref, int) and ref > 5:  # After insertion
+                                config['head'][i][0][j] = ref + 1
+                    elif isinstance(layer[0], int) and layer[0] > 5:
+                        # Single positive reference
+                        config['head'][i][0] = layer[0] + 1
+                
+                print(f"   🔧 Updated head layer references for single backbone insertion")
             
             print(f"   ✅ DINO Version: {dino_version} (applied to all DINO modules)")
             print(f"   🔧 Using preprocessing config as base to maintain channel flow")
@@ -653,11 +727,20 @@ def main():
     print(f"   Task: Instance Segmentation")
     print(f"   Model: YOLOv12{args.model_size}-seg")
     if args.use_dino:
-        # Triple integration: preprocessing + backbone
+        # Advanced integration: preprocessing + backbone
         if args.dino_preprocessing and args.dino_variant:
-            print(f"   DINO: 🚀 TRIPLE INTEGRATION")
-            print(f"         ├─ P0 (Preprocessing): {args.dino_preprocessing}")
-            print(f"         └─ P3+P4 (Backbone): {args.dino_variant} ({args.dino_integration}-scale)")
+            if args.integration == 'triple':
+                print(f"   DINO: 🚀 TRIPLE INTEGRATION")
+                print(f"         ├─ P0 (Preprocessing): {args.dino_preprocessing}")
+                print(f"         └─ P3+P4 (Backbone): {args.dino_variant} ({args.dino_integration}-scale)")
+            elif args.integration == 'dualp0p3':
+                print(f"   DINO: 🔄 DUALP0P3 INTEGRATION")
+                print(f"         ├─ P0 (Preprocessing): {args.dino_preprocessing}")
+                print(f"         └─ P3 (Backbone): {args.dino_variant} ({args.dino_integration}-scale)")
+            else:
+                print(f"   DINO: {args.integration.upper()} INTEGRATION")
+                print(f"         ├─ P0 (Preprocessing): {args.dino_preprocessing}")
+                print(f"         └─ Backbone: {args.dino_variant} ({args.dino_integration}-scale)")
         # Preprocessing only
         elif args.dino_preprocessing and not args.dino_variant:
             print(f"   DINO: Preprocessing with {args.dino_preprocessing}")
