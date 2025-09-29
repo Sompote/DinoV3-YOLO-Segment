@@ -9,16 +9,13 @@ Usage Examples:
     # Basic segmentation training
     python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --epochs 100
 
-    # DINO-enhanced segmentation (single-scale with DINOv3) - DINOVERSION REQUIRED
+    # DINO-enhanced segmentation (single integration: P4 level) - DINOVERSION REQUIRED
     python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --integration single --dinoversion v3 --epochs 100
 
-    # DINO-enhanced segmentation (dual-scale for best performance with DINOv2) - DINOVERSION REQUIRED
+    # DINO-enhanced segmentation (dual integration: P3+P4 levels) - DINOVERSION REQUIRED
     python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --integration dual --dinoversion v2 --epochs 100
 
-    # DINO preprocessing approach with DINOv3 - DINOVERSION REQUIRED
-    python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size s --use-dino --dino-variant vitb16 --integration single --dinoversion v3 --epochs 100
-
-    # TRIPLE DINO integration (ultimate performance) - DINOVERSION REQUIRED
+    # TRIPLE DINO integration (P0+P3+P4 levels - ultimate performance) - DINOVERSION REQUIRED
     python train_yolov12_segmentation.py --data segmentation_data.yaml --model-size l --use-dino --dino-variant vitl16 --integration triple --dinoversion v3 --epochs 150
 """
 
@@ -60,19 +57,14 @@ def create_segmentation_config_path(model_size, use_dino=False, dino_variant=Non
     
     # Triple integration: preprocessing + backbone integration (ultimate performance)
     if dino_preprocessing and dino_variant:
-        # For triple integration, we'll use the backbone integration config as the base
-        # and add preprocessing to it - this maintains proper channel flow
-        if dino_integration == 'dual':
-            config_name = f'yolov12{model_size}-dino3-{dino_variant}-dual-seg.yaml'
-        else:
-            config_name = f'yolov12{model_size}-dino3-{dino_variant}-single-seg.yaml'
-        
-        config_path = f'ultralytics/cfg/models/v12/{config_name}'
+        # For triple integration, use the preprocessing config as base and add backbone enhancement
+        # This maintains proper channel flow since preprocessing is already handled
+        config_path = f'ultralytics/cfg/models/v12/yolov12{model_size}-dino3-preprocess-seg.yaml'
         if Path(config_path).exists():
             return config_path
         else:
-            # Fallback to generic dual config for triple integration
-            return f'ultralytics/cfg/models/v12/yolov12s-dino3-vitb16-dual-seg.yaml'
+            # Fallback to generic preprocessing config for triple integration
+            return 'ultralytics/cfg/models/v12/yolov12-dino3-preprocess-seg.yaml'
     
     # DINO preprocessing only (input enhancement)
     if dino_preprocessing and not dino_variant:
@@ -167,17 +159,14 @@ Examples:
                            choices=['vits16', 'vitb16', 'vitl16', 'vitl16_distilled', 'vith16_plus', 'vit7b16', 'vit7b16_lvd',
                                    'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large'],
                            help='DINO model variant: ViTs/B/L/L-dist/H+/7B-16/7B-LVD for different model sizes and datasets (required if --use-dino with integration)')
-    dino_group.add_argument('--dino-integration', type=str, default='single',
-                           choices=['single', 'dual'],
-                           help='DINO integration: single(P4 level) or dual(P3+P4 levels)')
+    dino_group.add_argument('--integration', type=str, default='single',
+                           choices=['single', 'dual', 'triple'],
+                           help='DINO integration strategy: single(P4), dual(P3+P4), triple(P0+P3+P4)')
     dino_group.add_argument('--dino-preprocessing', type=str, default=None,
-                           help='DINO preprocessing model (alternative to --dino-variant)')
+                           help='DINO preprocessing model (advanced users only - use --integration triple instead)')
     dino_group.add_argument('--dinoversion', type=str, required=False,
                            choices=['v2', 'v3'],
                            help='DINO version: v2 (DINOv2) or v3 (DINOv3) - REQUIRED when using --use-dino')
-    dino_group.add_argument('--integration', type=str, default='single',
-                           choices=['single', 'dual', 'triple'],
-                           help='DINO integration strategy: single(P4), dual(P3+P4), triple(P0+P3+P4) - replaces --dino-integration and --dino-preprocessing')
     dino_group.add_argument('--freeze-dino', action='store_true', default=True,
                            help='Freeze DINO weights during training (default: True)')
     dino_group.add_argument('--unfreeze-dino', action='store_true',
@@ -310,30 +299,30 @@ def validate_segmentation_arguments(args):
         
         LOGGER.info(f"🔄 Using DINO version: {args.dinoversion.upper()}")
         
-        # Handle new --integration parameter
-        if hasattr(args, 'integration'):
-            if args.integration == 'single':
-                args.dino_integration = 'single'
+        # Handle --integration parameter
+        if args.integration == 'single':
+            args.dino_integration = 'single'
+            # Clear any existing preprocessing to ensure clean single integration
+            if not args.dino_preprocessing:
                 args.dino_preprocessing = None
-                LOGGER.info("📐 SINGLE INTEGRATION: DINO enhancement at P4 level")
-            elif args.integration == 'dual':
-                args.dino_integration = 'dual' 
+            LOGGER.info("📐 SINGLE INTEGRATION: DINO enhancement at P4 level")
+        elif args.integration == 'dual':
+            args.dino_integration = 'dual' 
+            # Clear any existing preprocessing to ensure clean dual integration
+            if not args.dino_preprocessing:
                 args.dino_preprocessing = None
-                LOGGER.info("📐 DUAL INTEGRATION: DINO enhancement at P3+P4 levels")
-            elif args.integration == 'triple':
-                args.dino_integration = 'dual'
-                if not args.dino_preprocessing:
-                    args.dino_preprocessing = f"dinov3_{args.dino_variant}"
-                LOGGER.info("🚀 TRIPLE INTEGRATION: DINO enhancement at P0+P3+P4 levels")
-                LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} (P3+P4)")
-        else:
-            # Fallback to old logic for backward compatibility
-            if args.dino_variant and args.dino_preprocessing:
-                LOGGER.info("🚀 TRIPLE DINO INTEGRATION: Preprocessing (P0) + Backbone (P3+P4)")
-                LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} ({args.dino_integration})")
-            
-            if args.dino_variant and not args.dino_integration:
-                LOGGER.warning(f"No --dino-integration specified, using default: single")
+            LOGGER.info("📐 DUAL INTEGRATION: DINO enhancement at P3+P4 levels")
+        elif args.integration == 'triple':
+            args.dino_integration = 'dual'  # Triple uses dual backbone + preprocessing
+            if not args.dino_preprocessing:
+                args.dino_preprocessing = f"dinov3_{args.dino_variant}"
+            LOGGER.info("🚀 TRIPLE INTEGRATION: DINO enhancement at P0+P3+P4 levels")
+            LOGGER.info(f"   📐 Architecture: {args.dino_preprocessing} (P0) + {args.dino_variant} (P3+P4)")
+        
+        # Validate dino_variant is provided for backbone integration
+        if args.integration in ['single', 'dual', 'triple'] and not args.dino_variant:
+            LOGGER.error("❌ --dino-variant is required when using --integration with --use-dino")
+            sys.exit(1)
     
     # Handle DINO freezing logic
     if args.unfreeze_dino:
@@ -483,51 +472,72 @@ def modify_segmentation_config_for_dino(config_path, dino_preprocessing, model_s
         print("🚀 Configuring TRIPLE DINO3 Segmentation Integration...")
         print("   📐 P0 (Preprocessing) + P3/P4 (Backbone) Enhancement")
         
-        # For triple integration, we add preprocessing to the backbone config
-        # Insert DINO3Preprocessor at the beginning of the backbone
+        # For triple integration with preprocessing config, add DINO3Backbone layers to existing backbone
+        # This maintains proper channel flow since preprocessing is already handled in the config
         if 'backbone' in config and config['backbone']:
-            # Insert preprocessor as the first layer
-            preprocessor_layer = [-1, 1, 'DINO3Preprocessor', [dino_preprocessing, freeze_dino, 3, dino_version]]
-            config['backbone'].insert(0, preprocessor_layer)
+            # Find and update the existing DINO3Preprocessor layer
+            for i, layer in enumerate(config['backbone']):
+                if len(layer) >= 4 and layer[2] == 'DINO3Preprocessor':
+                    # Update preprocessor with the specified variant
+                    # Format: [model_name, freeze_backbone, output_channels]
+                    if len(layer[3]) >= 1:
+                        config['backbone'][i][3][0] = dino_preprocessing
+                        # Keep freeze_backbone setting (layer[3][1]) 
+                        config['backbone'][i][3][1] = freeze_dino
+                        # Keep output_channels as 3 (layer[3][2])
+                        # dino_version will default to 'v3' in constructor
+                    print(f"   ✅ P0 Enhancement: {dino_preprocessing} (updated existing preprocessor)")
+                    break
             
-            # Update the first Conv layer to expect 3 channels from preprocessor
-            if len(config['backbone']) > 1:
-                first_conv = config['backbone'][1]
-                if len(first_conv) >= 4 and first_conv[2] == 'Conv':
-                    # Update the first Conv layer to expect 3 input channels from preprocessor
-                    # Format: [-1, repeats, 'Conv', [out_channels, kernel_size, stride, padding, groups]]
-                    if len(first_conv[3]) >= 1:
-                        # The input channels are now 3 (from preprocessor), but we don't need to specify
-                        # input channels in YOLO configs as they're inferred. Just ensure consistency.
-                        print(f"   🔧 First Conv layer after preprocessor: {first_conv}")
-                        # The layer will automatically adapt to 3 input channels
-            
-            # Update existing DINO3Backbone layers to include dino_version
-            for layer in config['backbone']:
-                if len(layer) >= 4 and layer[2] == 'DINO3Backbone':
-                    # Add dino_version as the 4th parameter: [model_name, freeze_backbone, output_channels, dino_version]
-                    if len(layer[3]) == 3:  # Current format: [model_name, freeze_backbone, output_channels]
-                        layer[3].append(dino_version)
-            
-            print(f"   ✅ P0 Enhancement: {dino_preprocessing} (inserted at backbone start)")
-            print(f"   ✅ P3/P4 Enhancement: {dino_variant} ({dino_integration}-scale) (from base config)")
-            print(f"   ✅ DINO Version: {dino_version} (applied to all DINO modules)")
-            
-            # Update head layer references since we inserted a layer at the beginning
-            if 'head' in config:
-                for i, layer in enumerate(config['head']):
-                    # Update layer references that point to backbone layers
-                    if isinstance(layer[0], list):
-                        # Handle multi-input layers like Concat and Segment
-                        for j, ref in enumerate(layer[0]):
-                            if isinstance(ref, int) and ref > 0:
-                                # Positive references need to be incremented
-                                config['head'][i][0][j] = ref + 1
-                    elif isinstance(layer[0], int) and layer[0] > 0:
-                        # Single positive reference
-                        config['head'][i][0] = layer[0] + 1
+            # Add DINO3Backbone layers at appropriate positions for P3 and P4 enhancement
+            # For nano scale, we need to be careful about channel dimensions
+            if dino_integration == 'dual':
+                # Add DINO3Backbone at P3 (after layer 5 in nano config) and P4 (after layer 7)
+                # Determine output channels based on model size
+                if model_size == 'n':
+                    p3_channels = 128  # After scaling: 512 * 0.25 = 128
+                    p4_channels = 128  # After scaling: 512 * 0.25 = 128
+                elif model_size == 's':
+                    p3_channels = 256  # After scaling: 512 * 0.5 = 256
+                    p4_channels = 256  # After scaling: 512 * 0.5 = 256
+                else:
+                    p3_channels = 512  # Full scale
+                    p4_channels = 512  # Full scale
                 
-                print(f"   🔧 Updated head layer references (+1 for preprocessor insertion)")
+                # Insert DINO3Backbone after P3 layer (layer 5 in preprocessor config)
+                if len(config['backbone']) > 5:
+                    p3_layer = [5, 1, 'DINO3Backbone', [dino_variant, freeze_dino, p3_channels]]
+                    config['backbone'].insert(6, p3_layer)
+                    print(f"   ✅ P3 Enhancement: {dino_variant} (inserted after layer 5)")
+                
+                # Insert DINO3Backbone after P4 layer (now layer 8 after insertion)
+                if len(config['backbone']) > 8:
+                    p4_layer = [7, 1, 'DINO3Backbone', [dino_variant, freeze_dino, p4_channels]]
+                    config['backbone'].insert(9, p4_layer)
+                    print(f"   ✅ P4 Enhancement: {dino_variant} (inserted after layer 7)")
+                
+                # Update head layer references to account for the two new layers
+                if 'head' in config:
+                    for i, layer in enumerate(config['head']):
+                        # Update layer references that point to backbone layers after insertion points
+                        if isinstance(layer[0], list):
+                            # Handle multi-input layers like Concat and Segment
+                            for j, ref in enumerate(layer[0]):
+                                if isinstance(ref, int):
+                                    if ref > 5:  # After first insertion
+                                        config['head'][i][0][j] = ref + 1
+                                    if ref > 7:  # After second insertion (accounting for first)
+                                        config['head'][i][0][j] = ref + 1
+                        elif isinstance(layer[0], int):
+                            if layer[0] > 5:  # After first insertion
+                                config['head'][i][0] = layer[0] + 1
+                            if layer[0] > 7:  # After second insertion (accounting for first)
+                                config['head'][i][0] = layer[0] + 1
+                    
+                    print(f"   🔧 Updated head layer references for dual backbone insertion")
+            
+            print(f"   ✅ DINO Version: {dino_version} (applied to all DINO modules)")
+            print(f"   🔧 Using preprocessing config as base to maintain channel flow")
         
     else:
         print("🔧 Configuring DINO3 Segmentation Preprocessing...")
