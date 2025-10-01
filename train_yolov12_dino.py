@@ -6,11 +6,14 @@ This script provides a systematic approach to training YOLOv12 models with DINOv
 following the same command structure as YOLOv13 + DINO implementation.
 
 Usage Examples:
-    # Recommended configuration
+    # Single integration (P4 level)
     python train_yolov12_dino.py --data coco.yaml --yolo-size s --dino-version 3 --dino-variant vitb16 --integration single --epochs 100
 
-    # High-performance dual-scale
+    # Dual integration (P3+P4 levels)  
     python train_yolov12_dino.py --data coco.yaml --yolo-size l --dino-version 3 --dino-variant vitl16 --integration dual --epochs 200
+
+    # Triple integration (P0+P3+P4 levels - ultimate performance)
+    python train_yolov12_dino.py --data coco.yaml --yolo-size l --dino-version 3 --dino-variant vitl16 --integration triple --epochs 300
 
     # Base YOLOv12 (no DINO)
     python train_yolov12_dino.py --data coco.yaml --yolo-size s --epochs 100
@@ -131,12 +134,12 @@ def parse_arguments():
     parser.add_argument('--dino-version', type=str, choices=['3'], default=None,
                        help='DINO version (3 for DINOv3). Omit for base YOLOv12')
     parser.add_argument('--dino-variant', type=str, default=None,
-                       choices=['vits16', 'vitb16', 'vitl16', 'vith16_plus', 'vit7b16',
+                       choices=['vits16', 'vitb16', 'vitl16', 'vitl16_distilled', 'vith16_plus', 'vit7b16',
                                'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large'],
                        help='DINOv3 model variant')
     parser.add_argument('--integration', type=str, default='single',
-                       choices=['single', 'dual'],
-                       help='Integration type: single (P4 only) or dual (P3+P4)')
+                       choices=['single', 'dual', 'triple'],
+                       help='Integration type: single (P4), dual (P3+P4), triple (P0+P3+P4)')
     parser.add_argument('--dino-input', type=str, default=None,
                        help='Custom DINO model input/path (overrides --dino-variant)')
     
